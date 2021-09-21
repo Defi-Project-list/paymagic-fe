@@ -1,0 +1,50 @@
+
+
+
+Cover
+-----
+You're earning And you're protected.🥽
+
+YOU'VE DEPOSITED:						TOTAL DEPOSITS
+1,000 DAI ($1,000 USD)					1,000,000 DAI ($1M USD)
+
+YOU'VE EARNED:							
+100 COMP ($10 USD)
+
+
+Actions
+DEPOSIT:								WITHDRAW:
+<Button>								<Button>
+
+
+REDEEM EARNINGS							SUBMIT CLAIM
+GET 10 COMP								No Payout Event
+<Button>								<Button>
+
+
+
+
+
+Staking to Protect DeFi
+-----
+You're earning fees and protecting DeFi. 💪🛡
+
+YOU'VE DEPOSITED:						TOTAL STAKED
+1,000 DAI ($1,000 USD)					1,000,000 DAI ($1M USD)
+
+YOU'VE EARNED:							
+100 COMP ($10 USD)
+
+
+Actions
+DEPOSIT:								WITHDRAW:
+<Button>								<Button>
+
+
+REDEEM EARNINGS	
+GET 10 COMP
+<Button>
+
+ASSET		PROTOCOL	YIELD		TOTAL DEPOSITED		PROTECTION	...		
+		IN
+

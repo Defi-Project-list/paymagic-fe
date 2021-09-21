@@ -1,0 +1,149 @@
+// @flow
+
+import React, { useContext, useState } from 'react';
+
+import {
+  Page,
+  Grid,
+  Dimmer,
+  Table,
+  Text,
+  Card,
+  Avatar,
+  Tag,
+  Header,
+  Icon
+} from "tabler-react";
+
+import ProtektDepositCard from "../components/ProtektDepositCard";
+import SiteWrapper from "../SiteWrapper.react";
+
+import { useTokenPrice, useContractLoader, useLendingMarketMetrics } from "../hooks";
+import {Web3Context} from '../App.react';
+import { default as protektData } from "../data";
+
+function EarnYield() {
+  const web3Context = useContext(Web3Context);
+  const contracts = useContractLoader(web3Context.provider);
+  const tokenPrices = useTokenPrice(web3Context.provider, 'DAI,cDAI,WETH', 600000);
+  const lendingMarketMetrics = useLendingMarketMetrics(600000);
+
+  function returnCards(items=[], lendingMarketMetrics, tokenPrices, contracts) {
+    return items.map((item, key) => {
+      return (
+        <ProtektDepositCard
+          key={key}
+          item={item}
+          lendingMarketMetrics={lendingMarketMetrics}
+          tokenPrices={tokenPrices}
+          contracts={contracts}
+        />
+      )
+    })
+  }
+
+  function returnRows(items=[], lendingMarketMetrics, tokenPrices, contracts) {
+    return items.map((item, key) => {
+      return (
+        <ProtektDepositCard
+          key={key}
+          item={item}
+          lendingMarketMetrics={lendingMarketMetrics}
+          tokenPrices={tokenPrices}
+          contracts={contracts}
+        />
+      )
+    })
+  }
+
+  const [collapse, setCollapse] = useState(true);
+  const handleCollapseOnClick = () => {
+    setCollapse(!collapse);
+  };
+
+  return (
+    <SiteWrapper>
+      <Page.Content title="🏦 Earn Safe Yield">
+        <Grid.Row cards={true}>
+          <Grid.Col lg={12}>
+            
+              <Table
+                responsive
+                highlightRowOnHover
+                hasOutline
+                verticalAlign="center"
+                className="text-nowrap"
+              >
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColHeader alignContent="center" className="w-1">Asset</Table.ColHeader>
+                      <Table.ColHeader alignContent="center" className="w-2">Protocol</Table.ColHeader>
+                      <Table.ColHeader alignContent="center" className="w-1">Yield</Table.ColHeader>
+                      <Table.ColHeader alignContent="center" className="w-1">Total Deposits</Table.ColHeader>
+                      <Table.ColHeader className="w-2">Protection Against</Table.ColHeader>
+                      <Table.ColHeader alignContent="center"  className="w-1">
+                        <i className="icon-settings" />
+                      </Table.ColHeader>
+                    </Table.Row>
+                  </Table.Header>
+
+                  <Table.Body>
+
+                <Card className={collapse ? `card-collapsed` : ``}>
+                  <Card.Header className="p-0">
+                
+                    <Table.Row>
+                      <Table.Col alignContent="center">
+                        <Avatar
+                          imageURL="assets/dai-logo.png"
+                        />
+                        <Text size="h4" RootComponent="span" className="ml-2">DAI</Text>
+                      </Table.Col>
+                      <Table.Col  alignContent="center">
+                        <Avatar
+                          imageURL="assets/compound-logo.png"
+                          size="md"
+                        />
+                        <Text size="h4" RootComponent="span" className="ml-1">COMPOUND</Text>
+                      </Table.Col>
+                      <Table.Col  alignContent="center">
+                        <Text size="h4" className="mb-0">5.02%</Text>
+                      </Table.Col>
+                      <Table.Col  alignContent="center">
+                        <Text>$1.46M</Text>
+                        <Text size="sm" muted>
+                          1.2M DAI
+                        </Text>
+                      </Table.Col>
+                      <Table.Col>
+                        <Tag.List>
+                          <Tag rounded color="purple">Smart Contract Bugs</Tag>
+                        </Tag.List>
+                      </Table.Col>
+                      <Table.Col alignContent="center">
+                        <a className={"card-options-collapse"} data-toggle={"card-collapse"} onClick={() => handleCollapseOnClick}>
+                          <Icon name={"chevron-up"} />
+                        </a>
+                      </Table.Col>
+                    </Table.Row>
+              </Card.Header>
+            </Card>
+            </Table.Body>
+            </Table>
+
+
+          </Grid.Col>
+        </Grid.Row>
+        <Grid.Row cards={true}>
+          <Grid.Col lg={12}>
+            { (!lendingMarketMetrics.length && tokenPrices) ? <Dimmer active loader /> : 
+              returnCards(protektData.protektContracts, lendingMarketMetrics, tokenPrices, contracts)
+            }
+          </Grid.Col>
+        </Grid.Row>
+      </Page.Content>
+    </SiteWrapper>
+  )
+}
+
+export default EarnYield;

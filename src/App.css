@@ -1,0 +1,95 @@
+.page {
+  font-size: 1rem;
+  background-color: #ebfcf7;
+  background-image: linear-gradient(to right bottom, #dafcf7, #d3f8fc, #d1f2ff, #d5ebff, #dde4ff);
+  font-family: "Segoe UI",'DM Sans', "Helvetica Neue", Arial, sans-serif;
+}
+
+.page-header {
+  justify-content: center !important;
+}
+
+
+footer {
+  background-color: transparent !important;
+  border-top: 1px solid rgba(0, 40, 100, 0.12) !important;
+}
+
+a:not([href]):not([tabindex]).btn-primary {
+  color: white !important;
+}
+
+.header {
+  background-color: transparent;
+}
+
+.header a:not(.btn) {
+  /*color: #6e7687;*/
+  font-size: 1rem;
+}
+
+.nav-tabs .nav-link {
+  border-width: 3px;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+  color: #0D1E3B;
+  border-color: #dee2e6 #dee2e6 #0D1E3B;
+  font-weight: 500;
+}
+
+.header-toggler {
+  align-self: center;
+}
+
+
+
+.hide {
+  display: none !important;
+}
+
+.accordion__button {
+  cursor: pointer;
+}
+
+.accordion__button:focus {
+  outline: none !important;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a.disabled {
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+a.disabled > div {
+    opacity: 0.8;
+}
+
+
+.no-decoration {
+  text-decoration: none !important;
+  text-decoration-skip-ink: none !important;
+  color: #0D1E3B !important;
+}
+
+.card-payment-type-image {
+  max-width: 80px;
+}
+
+.card-payment-type-summary {
+  height: 120px;
+}
+
+.height-200 {
+  height: 200px !important;
+}
+
+.whitespace-preline {
+  white-space: pre-line;  
+}
+
