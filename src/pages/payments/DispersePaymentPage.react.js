@@ -87,8 +87,22 @@ function DispersePaymentPage() {
     // RECIPIENTS    
     let tokenBalanceBN = await contracts[values.token]["balanceOf"](...[web3Context.address]);
     let tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[values.token]['decimals'])
+    let validAddresses = !_.includes(
+      addressArray.map(x => {
+        try {
+          let temp = ethers.utils.getAddress(x)
+          return ethers.utils.isAddress(x)
+        } catch {
+          return false
+        }
+      }),
+      false
+    )
+
     if (!values.recipients) {
       errors.recipients = 'Required';
+    } else if (!validAddresses) {
+      errors.recipients = 'Unable to parse the format. Please try again.';
     } else if (totalAmount >= 0 && !_.isNumber(totalAmount)) {
       errors.recipients = 'Unable to parse the format. Please try again.';
     } else if (tokenBalance.lt(totalAmount)) {
@@ -128,15 +142,19 @@ function DispersePaymentPage() {
       setTotalAmount(_totalAmount)
     }
     catch(err) {
+      setStatus(2)
+      setAddressArray([])
+      setAmountArray([])
+      setTotalAmount(0)
       console.error(err)
     }
   }
 
   function formatDetails(addressArray, amountArray, tokenSymbol) {
     return addressArray.map((a, i) => {
-      console.log(amountArray[i])
+      let tempBN = amountArray[i] ? amountArray[i] : ethers.BigNumber.from(0)
       let tempNumber = ethers.utils.formatUnits(
-        amountArray[i], paymagicData.contracts[token]['decimals']
+        tempBN, paymagicData.contracts[token]['decimals']
       )
       return `${addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${tokenSymbol}\n`
     })
@@ -198,12 +216,14 @@ function DispersePaymentPage() {
                   onSubmit={async (values, actions) => {
                     setLoading(true);
 
-                    const afterMine = async (error) => {
+                    const afterMine = async (txStatus) => {
                       // await sleep(15000)
-                      if(status === 3) {
+                      if(status === 6 || status === 5) {
+                        setStatus(7);
+                      } else if(status === 4 || status === 3) {
                         setStatus(5);
                       } else {
-                        setStatus(7);
+                        setStatus(3);
                       }
                       setLoading(false);
                     }

@@ -63,19 +63,19 @@ export default function Transactor(provider, cb, gasPrice, etherscan) {
             };
           });
           emitter.on('txConfirmed', transaction => {
-            cb();
+            cb('txConfirmed');
             return {
               onclick: () => window.open((etherscan || etherscanTxUrl) + transaction.hash),
             };
           });
           emitter.on('txCancel', transaction => {
-            cb();
+            cb('txCancel');
             return {
               onclick: () => window.open((etherscan || etherscanTxUrl) + transaction.hash),
             };
           });
           emitter.on('txFailed', transaction => {
-            cb();
+            cb('txFailed');
             return {
               onclick: () => window.open((etherscan || etherscanTxUrl) + transaction.hash),
             };
