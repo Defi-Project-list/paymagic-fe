@@ -1,0 +1,10 @@
+# package directories
+node_modules
+jspm_packages
+
+build
+git stash
+
+.DS_Store
+
+src/services/amplify/aws-exports.js
