@@ -12,12 +12,12 @@ import {
 
 import AboutPage from "./pages/AboutPage.react";
 import PortfolioPage from "./pages/PortfolioPage.react";
+import TransactionPage from "./pages/TransactionPage.react";
 import PaymentsPage from "./pages/PaymentsPage.react";
 import DispersePaymentPage from "./pages/payments/DispersePaymentPage.react";
 import VestingPaymentPage from "./pages/payments/VestingPaymentPage.react";
-import BurnerPaymentPage from "./pages/payments/BurnerPaymentPage.react";
-import ClaimTokenPage from "./pages/ClaimTokenPage.react";
-import TransactionPage from "./pages/TransactionPage.react";
+import AirdropPaymentPage from "./pages/payments/AirdropPaymentPage.react";
+import StreamingPaymentPage from "./pages/payments/StreamingPaymentPage.react";
 
 import { useWalletContext } from "./hooks";
 
@@ -84,7 +84,8 @@ function App(props: Props): React.Node {
               <Route exact path="/payments" component={PaymentsPage} />
               <Route exact path="/payments/disperse" component={DispersePaymentPage} />
               <Route exact path="/payments/vesting" component={VestingPaymentPage} />
-              <Route exact path="/claim" component={ClaimTokenPage} />
+              <Route exact path="/payments/airdrop" component={AirdropPaymentPage} />
+              <Route exact path="/payments/streaming" component={StreamingPaymentPage} />
               <Redirect to='/payments' />
               <Route component={Error404} />
             </Switch>

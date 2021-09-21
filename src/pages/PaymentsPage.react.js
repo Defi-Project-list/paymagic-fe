@@ -50,7 +50,15 @@ const paymentTypes = [
     examples: 'Reward liquidity providers, users, or communities',
     image: '/image/airdrop-payment.png',
     link: '/payments/airdrop',
-    disabled: true
+    disabled: false
+  },
+  {
+    title: 'Stream',
+    summary: 'Send tokens continuously by the second',
+    examples: 'Token vesting, salaries, real-time cashflows & subscriptions',
+    image: '/image/stream-payment.png',
+    link: 'https://app.superfluid.finance/',
+    disabled: false
   },
   {
     title: 'Escrow',
@@ -61,15 +69,7 @@ const paymentTypes = [
     disabled: true
   },
   {
-    title: 'Stream',
-    summary: 'Send tokens continuously by the second',
-    examples: 'Token vesting, salaries, real-time cashflows & subscriptions',
-    image: '/image/stream-payment.png',
-    link: 'https://app.superfluid.finance/',
-    disabled: true
-  },
-  {
-    title: 'Private transfer',
+    title: 'Private payment',
     summary: 'Send tokens secretly',
     examples: 'Use for private transactions or avoiding censorship',
     image: '/image/private-payment.png',
@@ -141,11 +141,6 @@ function PaymentsPage() {
         <Grid.Row className="mt-5 d-flex justify-content-center ">
           {
             returnPaymentTypeCard(paymentTypes.slice(4,6))
-          }
-        </Grid.Row>
-        <Grid.Row className="mt-5 d-flex justify-content-center ">
-          {
-            returnPaymentTypeCard(paymentTypes.slice(6,8))
           }
         </Grid.Row>
       </Page.Content>
