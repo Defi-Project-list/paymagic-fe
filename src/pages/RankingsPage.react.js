@@ -9,12 +9,7 @@ import {
   Grid,
   Card,
   Text,
-  Header,
-  List,
-  Dimmer,
   Table,
-  Button,
-  Icon,
   Avatar
 } from "tabler-react";
 import SiteWrapper from "../SiteWrapper.react";

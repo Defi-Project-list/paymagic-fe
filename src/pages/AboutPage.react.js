@@ -6,9 +6,9 @@ import {
   Page,
   Grid,
   Card,
-  Text,
-  Header,
-  List
+  // Text,
+  // Header,
+  // List
 } from "tabler-react";
 import SiteWrapper from "../SiteWrapper.react";
 

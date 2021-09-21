@@ -10,11 +10,7 @@ import {
   Error503,
 } from "./pages";
 
-import EarnYieldPage from "./pages/EarnYieldPage.react";
-import StakingPage from "./pages/StakingPage.react";
 import AboutPage from "./pages/AboutPage.react";
-import DeFiPage from "./pages/DeFiPage.react";
-import AppStorePage from "./pages/AppStorePage.react";
 import PortfolioPage from "./pages/PortfolioPage.react";
 import PaymentsPage from "./pages/PaymentsPage.react";
 import DispersePaymentPage from "./pages/payments/DispersePaymentPage.react";
@@ -22,8 +18,6 @@ import VestingPaymentPage from "./pages/payments/VestingPaymentPage.react";
 import BurnerPaymentPage from "./pages/payments/BurnerPaymentPage.react";
 import ClaimTokenPage from "./pages/ClaimTokenPage.react";
 import TransactionPage from "./pages/TransactionPage.react";
-import RankingsPage from "./pages/RankingsPage.react";
-import BurnerLeaderboardPage from "./pages/payments/BurnerLeaderboardPage.react";
 
 import { useWalletContext } from "./hooks";
 

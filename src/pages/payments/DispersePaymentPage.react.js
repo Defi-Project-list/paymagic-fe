@@ -5,40 +5,32 @@ import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
 import { ethers } from "ethers";
-import { Formik, useFormik, FormikProvider, useField } from 'formik';
-import * as Yup from 'yup';
-import NumberFormat from 'react-number-format';
+import { Formik } from 'formik';
 import * as csv from 'csvtojson'
+import Confetti from 'react-confetti'
 
 import {
   Page,
   Grid,
   Card,
   Text,
-  Header,
-  List,
+  // Header,
+  // List,
   Dimmer,
-  Table,
+  // Table,
   Button,
-  Icon,
-  Avatar,
+  // Icon,
+  // Avatar,
   Form
 } from "tabler-react";
 
-import DepositWithdrawTokensForm from "../../components/DepositWithdrawTokensForm";
-import InputTokenAmountForm from "../../components/InputTokenAmountForm";
-
-
 import SiteWrapper from "../../SiteWrapper.react";
-import TokenBalanceCard from "../../components/TokenBalanceCard";
-import TxCard from "../../components/TxCard";
 
 import {
   useGasPrice,
   useContractLoader,
-  useInterval,
 } from "../../hooks";
-import { GetAccountBalances, Transactor, sleep } from "../../utils";
+import { Transactor, sleep } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
 
@@ -50,30 +42,37 @@ function DispersePaymentPage() {
   const contracts = useContractLoader(web3Context.provider);
 
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('start'); // start, isValid, notValid, approveTx, isApproved, submitTx, complete
+  const [status, setStatus] = useState(1);
+    // 1 - start | 2 - notValid |  3 - isValid
+    // 4 - approveTx | 5 - isApproved | 6 - submitTx
+    // 7 - complete
   const [token, setToken] = useState('usdc');
   const [addressArray, setAddressArray] = useState([]);
   const [amountArray, setAmountArray] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
-  const [tokenBalance, setTokenBalance] = useState(ethers.BigNumber.from(0));
-  const [tokenAllowance, setTokenAllowance] = useState(ethers.BigNumber.from(0));
 
-  useEffect(() => {
-    async function fetchTokenInfo() {
-      // Update token balances & allowance
-      if(web3Context.ready) {
-        let tokenBalanceBN = await contracts[token]["balanceOf"](...[web3Context.address]);
-        let _tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[token]['decimals'])
+  // useEffect(() => {
+  //   async function fetchTokenInfo() {
+  //     // Update token balances & allowance
+  //     if(web3Context.ready && !_.isUndefined(contracts)) {
+  //       try {
+  //         let tokenBalanceBN = await contracts[token]["balanceOf"](...[web3Context.address]);
+  //         let _tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[token]['decimals'])
 
-        let tokenAllowanceBN = await contracts[token]["allowance"](...[web3Context.address, paymagicData.contracts.disperse.address]);
-        let _tokenAllowance = tokenAllowanceBN.div(10**paymagicData.contracts[token]['decimals'])
+  //         let tokenAllowanceBN = await contracts[token]["allowance"](...[web3Context.address, paymagicData.contracts.disperse.address]);
+  //         let _tokenAllowance = tokenAllowanceBN.div(10**paymagicData.contracts[token]['decimals'])
 
-        setTokenBalance(_tokenBalance)
-        setTokenAllowance(_tokenAllowance)
-      }
-    }
-    fetchTokenInfo();
-  }, [token, loading]);
+  //         setTokenBalance(_tokenBalance)
+  //         setTokenAllowance(_tokenAllowance)
+  //       }
+  //       catch(err) {
+  //         console.error(err)
+  //       }
+
+  //     }
+  //   }
+  //   fetchTokenInfo();
+  // }, [token, loading]);
 
 
   const validateRules = async values => {
@@ -114,22 +113,19 @@ function DispersePaymentPage() {
     try {
       parsed.forEach( (a,i) =>{
         _addressArray[i] = _.get(a, 'field1', null)
-        _amountArray[i] = _.toNumber(_.get(a, 'field2', 0))
-        _totalAmount = _totalAmount + _amountArray[i]
+        let tempAmount = _.toNumber(
+          _.get(a, 'field2', 0)
+        )
+        _totalAmount = _totalAmount + tempAmount
+        _amountArray[i] = ethers.utils.parseUnits(
+          _.toString(tempAmount), paymagicData.contracts[token]['decimals']
+        )
       })
 
-      let tokenBalanceBN = await contracts[token]["balanceOf"](...[web3Context.address]);
-      let _tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[token]['decimals'])
-
-      let tokenAllowanceBN = await contracts[token]["allowance"](...[web3Context.address, paymagicData.contracts.disperse.address]);
-      let _tokenAllowance = tokenAllowanceBN.div(10**paymagicData.contracts[token]['decimals'])
-
-      setStatus(_addressArray.length === _amountArray.length ? 'isValid' : 'notValid')
+      setStatus(_addressArray.length === _amountArray.length ? 3 : 2)
       setAddressArray(_addressArray)
       setAmountArray(_amountArray)
       setTotalAmount(_totalAmount)
-      setTokenBalance(_tokenBalance) // BigNumber
-      setTokenAllowance(_tokenAllowance) // BigNumber
     }
     catch(err) {
       console.error(err)
@@ -138,14 +134,18 @@ function DispersePaymentPage() {
 
   function formatDetails(addressArray, amountArray, tokenSymbol) {
     return addressArray.map((a, i) => {
-      return `${addressArray[i]}  ${numeral(amountArray[i]).format('0,0.0000')} ${tokenSymbol}\n`
+      console.log(amountArray[i])
+      let tempNumber = ethers.utils.formatUnits(
+        amountArray[i], paymagicData.contracts[token]['decimals']
+      )
+      return `${addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${tokenSymbol}\n`
     })
   }
 
   async function handleApproval(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts[token]["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(totalAmount), 6)), cb);
+      tx(contracts[token]["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(totalAmount), paymagicData.contracts[token]['decimals'])), cb);
     }
   }
   
@@ -176,16 +176,10 @@ function DispersePaymentPage() {
       </SiteWrapper>
     )
 
-    // console.log('-----')
-    // console.log(valid)
-    // console.log(addressArray)
-    // console.log(amountArray)
-    console.log(tokenAllowance.toNumber())
-    console.log(status)
-
   return (
     <SiteWrapper>
       <Page.Content title={title} headerClassName="d-flex justify-content-center">
+        { status === 7 ? <Confetti/> : <span/> }
         <Grid.Row className="d-flex justify-content-center">
           <Grid.Col lg={8}>
             <Link to="/payments">
@@ -206,21 +200,21 @@ function DispersePaymentPage() {
 
                     const afterMine = async (error) => {
                       // await sleep(15000)
-                      if(status === 'approvalTx') {
-                        setStatus('isApproved');
+                      if(status === 3) {
+                        setStatus(5);
                       } else {
-                        setStatus('complete');
+                        setStatus(7);
                       }
                       setLoading(false);
                     }
 
-                    if(status === 'isValid') {
+                    if(status === 3) {
                       // ApprovalTx
-                      setStatus('approvalTx');
+                      setStatus(4);
                       handleApproval(afterMine)
                     } else {
                       // SubmitTx
-                      setStatus('submitTx');
+                      setStatus(6);
                       handleSubmit(afterMine)
                     }
                   }}
@@ -253,6 +247,7 @@ function DispersePaymentPage() {
                             value={props.values.token}
                             error={props.errors.token}
                             onChange={handleTokenChange}
+                            disabled={status >= 5}
                           >
                             <option value='usdc'>
                               USDC
@@ -264,6 +259,7 @@ function DispersePaymentPage() {
                             value={props.values.recipients}
                             error={props.errors.recipients }
                             className='mb-3 height-200'
+                            disabled={status >= 5}
                             placeholder={`0xABCDFA1DC112917c781942Cc01c68521c415e, 1
 0x00192Fb10dF37c9FB26829eb2CC623cd1BF599E8, 2
 0x5a0b54d5dc17e0aadc383d2db43b0a0d3e029c4c, 3
@@ -272,7 +268,7 @@ function DispersePaymentPage() {
                             onChange={handleRecipientChanges}
                           />
                           { 
-                            (status !== 'start' || status !== 'notValid') && totalAmount > 0 && (
+                            (status >= 3) && totalAmount > 0 && (
                               <div>
                                 <Form.Group label="CONFIRM DETAILS">
                                   <Form.StaticText className="whitespace-preline">
@@ -288,7 +284,18 @@ function DispersePaymentPage() {
                             )
                           }
                           { 
-                            (totalAmount <= 0 || tokenAllowance.lt(totalAmount)) ? (
+                            (status >= 5) ? (
+                              <Button
+                                color="primary"
+                                type="submit"
+                                value="Submit"
+                                className="color "
+                                icon={'send'}
+                                disabled={status >= 7}
+                                loading={loading}
+                              >
+                                Send
+                              </Button> ) : (
                               <Button
                                 color="primary"
                                 type="submit"
@@ -300,18 +307,6 @@ function DispersePaymentPage() {
                               >
                                 Approve
                               </Button>
-                            ) : (
-                              <Button
-                                color="primary"
-                                type="submit"
-                                value="Submit"
-                                className="color "
-                                icon={'send'}
-                                disabled={totalAmount <= 0 || tokenAllowance.lt(totalAmount)}
-                                loading={loading}
-                              >
-                                Send
-                              </Button>
                             )
                           }
                         </Form.Group>
@@ -319,8 +314,6 @@ function DispersePaymentPage() {
                     )
                   }
                 }
-
-                
                 </Formik>
               </Card.Body>
             </Card>
