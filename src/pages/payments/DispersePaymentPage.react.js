@@ -78,15 +78,16 @@ function DispersePaymentPage() {
   const validateRules = async values => {
     const errors = {};
 
+    let tokenBalanceBN = await contracts[values.token]["balanceOf"](...[web3Context.address]);
+    let tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[values.token]['decimals'])
+
     // TOKEN
     if (!values.token) {
       // Check if user has enough tokens
-      errors.token = 'Not enough tokens'
+      errors.token = 'Required'
     }
 
     // RECIPIENTS    
-    let tokenBalanceBN = await contracts[values.token]["balanceOf"](...[web3Context.address]);
-    let tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[values.token]['decimals'])
     let validAddresses = !_.includes(
       addressArray.map(x => {
         try {
@@ -151,13 +152,15 @@ function DispersePaymentPage() {
   }
 
   function formatDetails(addressArray, amountArray, tokenSymbol) {
-    return addressArray.map((a, i) => {
+    let tempDetails = addressArray.map((a, i) => {
       let tempBN = amountArray[i] ? amountArray[i] : ethers.BigNumber.from(0)
       let tempNumber = ethers.utils.formatUnits(
         tempBN, paymagicData.contracts[token]['decimals']
       )
       return `${addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${tokenSymbol}\n`
     })
+
+    return `${tempDetails}\nTOTAL\n${numeral(totalAmount).format('0,0.0000')} ${paymagicData.contracts[token]['symbol']}\n`
   }
 
   async function handleApproval(cb) {
@@ -290,14 +293,9 @@ function DispersePaymentPage() {
                           { 
                             (status >= 3) && totalAmount > 0 && (
                               <div>
-                                <Form.Group label="CONFIRM DETAILS">
+                                <Form.Group label="CONFIRMATION DETAILS">
                                   <Form.StaticText className="whitespace-preline">
                                     { formatDetails(addressArray, amountArray, paymagicData.contracts[props.values.token]['symbol']) }
-                                  </Form.StaticText>
-                                </Form.Group>
-                                <Form.Group label="TOTAL SENDING" className='mb-3'>
-                                  <Form.StaticText>
-                                    {`${numeral(totalAmount).format('0,0.0000')} ${paymagicData.contracts[props.values.token]['symbol']} `}
                                   </Form.StaticText>
                                 </Form.Group>
                               </div>

@@ -38,7 +38,7 @@ const paymentTypes = [
   },
   {
     title: 'Vesting',
-    summary: 'Setup a token vesting schedule agreement',
+    summary: 'Start a token vesting schedule agreement',
     examples: 'Create a vesting schedule for your team or investors',
     image: '/image/vesting-payment.png',
     link: '/payments/vesting',
@@ -46,7 +46,7 @@ const paymentTypes = [
   },
   {
     title: 'Airdrop',
-    summary: 'Deposit token rewards for recipients to claim',
+    summary: 'Send token rewards for recipients to claim',
     examples: 'Reward liquidity providers, users, or communities',
     image: '/image/airdrop-payment.png',
     link: '/payments/airdrop',
@@ -55,9 +55,9 @@ const paymentTypes = [
   {
     title: 'Stream',
     summary: 'Send tokens continuously by the second',
-    examples: 'Token vesting, salaries, real-time cashflows & subscriptions',
+    examples: 'Create real-time subscriptions, salaries, or vesting',
     image: '/image/stream-payment.png',
-    link: 'https://app.superfluid.finance/',
+    link: '/payments/stream',
     disabled: false
   },
   {
