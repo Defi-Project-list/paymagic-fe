@@ -111,7 +111,7 @@ class SiteWrapper extends React.Component<Props, State> {
           copyright: (
             <React.Fragment>
               Copyright © 2021
-              <a href="https://twitter.com/defiwhale" target="_blank" rel="noopener noreferrer"> DeFi Whale</a>. All rights reserved.
+              <a href="https://twitter.com/corbpage" target="_blank" rel="noopener noreferrer"> Paymagic</a>. All rights reserved.
             </React.Fragment>
           ),
           nav: (
@@ -119,14 +119,14 @@ class SiteWrapper extends React.Component<Props, State> {
               <Grid.Col auto={true} className="d-flex">
                 <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
                   <List.Item className="list-inline-item">
-                    <a href="https://twitter.com/defiwhale" target="_blank" rel="noopener noreferrer">Twitter</a>
+                    <a href="https://twitter.com/corbpage" target="_blank" rel="noopener noreferrer">Twitter</a>
                   </List.Item>
                 </List>
               </Grid.Col>
               <Grid.Col auto={true} className="d-flex">
                 <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
                   <List.Item className="list-inline-item">
-                    <a href="https://github.com/corbinpage" target="_blank" rel="noopener noreferrer">Github</a>
+                    <a href="https://github.com/corbinpage/paymagic-fe" target="_blank" rel="noopener noreferrer">Github</a>
                   </List.Item>
                 </List>
               </Grid.Col>
