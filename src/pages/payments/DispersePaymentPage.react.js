@@ -9,8 +9,9 @@ import { Formik } from 'formik';
 import * as csv from 'csvtojson'
 import Confetti from 'react-confetti'
 
+import SiteWrapper from "../../SiteWrapper.react";
+import Page from '../../components/tablerReactAlt/src/components/Page'
 import {
-  Page,
   Grid,
   Card,
   Text,
@@ -18,8 +19,6 @@ import {
   Button,
   Form
 } from "tabler-react";
-
-import SiteWrapper from "../../SiteWrapper.react";
 import SelectToken from "../../components/SelectToken";
 
 import {
@@ -53,30 +52,15 @@ function DispersePaymentPage() {
     address: '',
     contract: '',
   })
-
-  const [addressArray, setAddressArray] = useState([]);
-  const [amountArray, setAmountArray] = useState([]);
-  const [totalAmount, setTotalAmount] = useState(0);
+  const [parsedData, setParsedData] = useState({
+    addressArray: [],
+    amountArray: [],
+    totalAmount: 0,
+    confirmationDetails: ''
+  })
 
   async function parseFormData(customTokenAddress, recipients) {
     if(web3Context.ready && !_.isUndefined(contracts)) {
-      let _validRecipientsData, _addressArray, _amountArray, _totalAmount
-
-      // Update parsed recipients text
-      try {
-        if(!_.isNull(recipients)) {
-          [_validRecipientsData, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText(recipients)
-           
-          setAddressArray(_addressArray)
-          setAmountArray(_amountArray)
-          setTotalAmount(_totalAmount)            
-        }
-
-      }
-      catch(err) {
-        console.error(err)
-        setStatus(2)
-      }
 
       // Update token data
       let _valueTokenData = false
@@ -104,6 +88,27 @@ function DispersePaymentPage() {
         setStatus(2)
       }
 
+      // Update parsed recipients text
+      let _validRecipientsData, _addressArray, _amountArray, _totalAmount
+      try {
+        if(!_.isNull(recipients)) {
+          [_validRecipientsData, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText(recipients)
+          let _confirmationDetails = formatConfirmationDetails(_addressArray, _amountArray, _totalAmount, tokenData.symbol)
+          
+          setParsedData({...parsedData,
+            addressArray: _addressArray,
+            amountArray: _amountArray,
+            totalAmount: _totalAmount,
+            confirmationDetails: _confirmationDetails
+          })
+        }
+
+      }
+      catch(err) {
+        console.error(err)
+        setStatus(2)
+      }
+
       // Set validity status
       if(_validRecipientsData && _valueTokenData) {
         setStatus(3) 
@@ -112,69 +117,6 @@ function DispersePaymentPage() {
       }
     }
   }
-
-
-  const validateRules = async values => {
-    const errors = {};
-
-    // CUSTOM TOKEN ADDRESS
-    if (!values.customTokenAddress) {
-      errors.customTokenAddress = 'Required'
-    } else if ( !isAddress(values.customTokenAddress) ){
-      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
-    }
-    
-    let validcustomTokenAddress = !_.includes(
-      addressArray.map(x => {
-        return !!isAddress(values.customTokenAddress)
-      }),
-      false
-    )
-
-    //TOKEN
-    // if (!values.token) {
-    //   errors.token = 'Required'
-    // }
-
-    // RECIPIENTS    
-    let validAddresses = !_.includes(
-      addressArray.map(x => {
-        try {
-          let temp = ethers.utils.getAddress(x)
-          return ethers.utils.isAddress(temp)
-        } catch {
-          return false
-        }
-      }),
-      false
-    )
-    if (!values.recipients) {
-      errors.recipients = 'Required';
-    } else if (!validAddresses) {
-      errors.recipients = 'Unable to parse the text. Please try again.';
-    }
-
-    // Validate Token Balance
-    if(tokenData.contract) {
-      let tokenBalanceBN = await tokenData.contract["balanceOf"](...[web3Context.address]);
-
-      if (totalAmount <= 0 && !_.isNumber(totalAmount)) {
-        errors.recipients = 'Unable to parse the text. Please try again.';
-      }
-
-      if (tokenBalanceBN.lt(
-          ethers.utils.parseUnits(
-            _.toString(totalAmount),
-            tokenData.decimals
-          )
-        )
-      ) {
-        errors.recipients = 'Your token balance is too low';
-      }      
-    }
-
-    return errors;
-  };
 
   async function parseRecipientsText(recipients) {
     let _addressArray = []
@@ -222,58 +164,97 @@ function DispersePaymentPage() {
     }
   }
 
-  function formatConfirmationDetails(addressArray, amountArray, tokenSymbol) {
-    let tempDetails = addressArray.map((a, i) => {
-      let tempBN = amountArray[i] ? amountArray[i] : ethers.BigNumber.from(0)
+  function formatConfirmationDetails(_addressArray, _amountArray, _totalAmount, _tokenSymbol) {
+    let tempDetails = _addressArray.map((a, i) => {
+      let tempBN = _amountArray[i] ? _amountArray[i] : ethers.BigNumber.from(0)
       let tempNumber = ethers.utils.formatUnits(
         tempBN, tokenData.decimals
       )
-      return `${addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${tokenSymbol}`
+      return `${_addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${_tokenSymbol}`
     })
 
-    return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(totalAmount).format('0,0.0000')} ${tokenSymbol}\n`
+    return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${_tokenSymbol}\n`
   }
+
+  const validateRules = async values => {
+    const errors = {};
+
+    // CUSTOM TOKEN ADDRESS
+    if (!values.customTokenAddress) {
+      errors.customTokenAddress = 'Required'
+    } else if ( !isAddress(values.customTokenAddress) ){
+      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
+    }
+    
+    let validcustomTokenAddress = !_.includes(
+      parsedData.addressArray.map(x => {
+        return !!isAddress(values.customTokenAddress)
+      }),
+      false
+    )
+
+    //TOKEN
+    // if (!values.token) {
+    //   errors.token = 'Required'
+    // }
+
+    // RECIPIENTS    
+    let validAddresses = !_.includes(
+      parsedData.addressArray.map(x => {
+        try {
+          let temp = ethers.utils.getAddress(x)
+          return ethers.utils.isAddress(temp)
+        } catch {
+          return false
+        }
+      }),
+      false
+    )
+    if (!values.recipients) {
+      errors.recipients = 'Required';
+    } else if (!validAddresses) {
+      errors.recipients = 'Unable to parse the text. Please try again.';
+    }
+
+    // Validate Token Balance
+    if(tokenData.contract) {
+      let tokenBalanceBN = await tokenData.contract["balanceOf"](...[web3Context.address]);
+
+      if (parsedData.totalAmount <= 0 && !_.isNumber(parsedData.totalAmount)) {
+        errors.recipients = 'Unable to parse the text. Please try again.';
+      }
+
+      if (tokenBalanceBN.lt(
+          ethers.utils.parseUnits(
+            _.toString(parsedData.totalAmount),
+            tokenData.decimals
+          )
+        )
+      ) {
+        errors.recipients = 'Your token balance is too low';
+      }      
+    }
+
+    return errors;
+  };
 
   async function handleApproval(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(tokenData.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(totalAmount), tokenData.decimals)), cb);
+      tx(tokenData.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), tokenData.decimals)), cb);
     }
   }
   
   async function handleSubmit(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](tokenData.address, addressArray, amountArray), cb);
+      tx(contracts['disperse']["disperseTokenSimple"](tokenData.address, parsedData.addressArray, parsedData.amountArray), cb);
     }
   }
 
-  const title = `💳 Disperse Tokens`
-
-  if(!web3Context.ready)
-    return (
-      <SiteWrapper>
-        <Page.Content title={title} headerClassName="d-flex justify-content-center">
-          <Card><Card.Body><Text className="text-center font-italic">Connect Wallet Above<span role="img">👆</span></Text></Card.Body></Card>
-        </Page.Content>
-      </SiteWrapper>
-    )
-
-  if(walletContext.loading)
-    return (
-      <SiteWrapper>
-        <Page.Content title={title} headerClassName="d-flex justify-content-center">
-          <Dimmer active loader className="mt-8"/>
-        </Page.Content>
-      </SiteWrapper>
-    )
-
-  // console.log(`Status: ${status}`)
-  // console.log(`Token: ${JSON.stringify(tokenData)}`)
-
   return (
     <SiteWrapper>
-      <Page.Content title={title} headerClassName="d-flex justify-content-center">
+      <Page.Content title={`Disperse Tokens`} headerClassName="d-flex justify-content-center" web3ContextReady={web3Context.ready} walletContextLoading={walletContext.loading}>
         { status === 7 ? <Confetti/> : <span/> }
         <Grid.Row className="d-flex justify-content-center">
           <Grid.Col lg={8}>
@@ -319,18 +300,18 @@ function DispersePaymentPage() {
                   { props => {
                     async function handleCustomTokenAddressChanges(event) {
                       const _customTokenAddress = event.currentTarget.value
+                      props.setFieldValue('customTokenAddress', _customTokenAddress)
                       if(_customTokenAddress) {
                         parseFormData(_customTokenAddress, props.values.recipients)
                       }
-                      props.setFieldValue('customTokenAddress', _customTokenAddress)
                     }
 
                     async function handleRecipientChanges(event) {
                       const _recipients = event.currentTarget.value
+                      props.setFieldValue('recipients', _recipients)
                       if(_recipients) {
                         parseFormData(props.values.customTokenAddress, _recipients)
                       }
-                      props.setFieldValue('recipients', _recipients)
                     }
 
                     return (
@@ -366,17 +347,13 @@ function DispersePaymentPage() {
 ...`}
                             onChange={handleRecipientChanges}
                           />
-                          { 
-                            (status >= 3) && totalAmount > 0 && (
-                              <div>
-                                <Form.Group label="CONFIRMATION DETAILS">
-                                  <Form.StaticText className="whitespace-preline">
-                                    { formatConfirmationDetails(addressArray, amountArray, tokenData.symbol) }
-                                  </Form.StaticText>
-                                </Form.Group>
-                              </div>
-                            )
-                          }
+                          <div>
+                            <Form.Group label="CONFIRMATION DETAILS">
+                              <Form.StaticText className="whitespace-preline">
+                                { parsedData.confirmationDetails }
+                              </Form.StaticText>
+                            </Form.Group>
+                          </div>
                           { 
                             (status >= 5) ? (
                               <Button
