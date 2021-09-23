@@ -4,7 +4,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
-import { ethers } from "ethers";
+import { ethers, Contract } from "ethers";
 import { Formik } from 'formik';
 import * as csv from 'csvtojson'
 import Confetti from 'react-confetti'
@@ -61,11 +61,11 @@ function DispersePaymentPage() {
 
   useEffect(() => {
     async function parseFormData() {
-      let _status, _addressArray, _amountArray, _totalAmount
+      let _validRecipientsData, _addressArray, _amountArray, _totalAmount
       // Update parsed recipients text
       try {
         if(!_.isNull(formData.recipients)) {
-          [_status, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText()
+          [_validRecipientsData, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText()
            
           setAddressArray(_addressArray)
           setAmountArray(_amountArray)
@@ -75,9 +75,11 @@ function DispersePaymentPage() {
       }
       catch(err) {
         console.error(err)
+        setStatus(2)
       }
 
       // Update token data
+      let _valueTokenData = false
       try {
         if(formData.token && formData.token !=='') {
           setTokenData({
@@ -86,22 +88,33 @@ function DispersePaymentPage() {
             address: paymagicData.contracts[formData.token]['address'],
             contract: contracts[formData.token]
           })
+          _valueTokenData = true
         } else if(formData.customTokenAddress && formData.customTokenAddress !=='') {
+          const tokenContract = new Contract(
+            formData.customTokenAddress,
+            paymagicData.contracts['ERC20']['abi'],
+            web3Context.provider.getSigner()
+          );
+          let _symbol = await tokenContract.symbol()
+          let _decimals = await tokenContract.decimals()
+
           setTokenData({
-            symbol: paymagicData.contracts[formData.token]['symbol'],
-            decimals: paymagicData.contracts[formData.token]['decimals'],
-            address: paymagicData.contracts[formData.token]['address'],
-            contract: contracts[formData.token]
+            symbol: _symbol,
+            decimals: _decimals.toNumber(),
+            address: formData.customTokenAddress,
+            contract: tokenContract
           })
+          _valueTokenData = true
         }
 
       }
       catch(err) {
         console.error(err)
+        setStatus(2)
       }
 
       // Set validity status
-      if(_status && formData.token && formData.token !=='') {
+      if(_validRecipientsData && _valueTokenData) {
         setStatus(3) 
       } else {
         setStatus(2) 
@@ -119,21 +132,43 @@ function DispersePaymentPage() {
     // console.log(values)
 
     // CUSTOM TOKEN ADDRESS
-    // if (!values.customTokenAddress) {
-    //   errors.customTokenAddress = 'Required'
-    // }    
-
-    // TOKEN
-    if (!values.token) {
-      errors.token = 'Required'
+    if (!values.customTokenAddress) {
+      errors.customTokenAddress = 'Required'
+    } else {
+      try {
+        let temp = ethers.utils.getAddress(values.customTokenAddress)
+        if(!ethers.utils.isAddress(temp))
+          errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
+      } catch {
+        errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
+      }
     }
+    
+    let validcustomTokenAddress = !_.includes(
+      addressArray.map(x => {
+        try {
+          
+          return ethers.utils.isAddress(x)
+        } catch {
+          return false
+        }
+      }),
+      false
+    )
+
+
+
+    //TOKEN
+    // if (!values.token) {
+    //   errors.token = 'Required'
+    // }
 
     // RECIPIENTS    
     let validAddresses = !_.includes(
       addressArray.map(x => {
         try {
           let temp = ethers.utils.getAddress(x)
-          return ethers.utils.isAddress(x)
+          return ethers.utils.isAddress(temp)
         } catch {
           return false
         }
@@ -144,14 +179,15 @@ function DispersePaymentPage() {
     if (!values.recipients) {
       errors.recipients = 'Required';
     } else if (!validAddresses) {
-      errors.recipients = 'Unable to parse the format. Please try again.';
+      errors.recipients = 'Unable to parse the text. Please try again.';
     }
 
-    if(values.token) {
-      let tokenBalanceBN = await contracts[values.token]["balanceOf"](...[web3Context.address]);
+    // Validate Token Balance
+    if(tokenData.contract) {
+      let tokenBalanceBN = await tokenData.contract["balanceOf"](...[web3Context.address]);
 
-      if (totalAmount >= 0 && !_.isNumber(totalAmount)) {
-        errors.recipients = 'Unable to parse the format. Please try again.';
+      if (totalAmount <= 0 && !_.isNumber(totalAmount)) {
+        errors.recipients = 'Unable to parse the text. Please try again.';
       }
 
       if (tokenBalanceBN.lt(
@@ -343,18 +379,22 @@ function DispersePaymentPage() {
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
-                        <Form.Group label="TOKEN" className='m-3'>
-                          <SelectToken
-                            name="token"
-                            defaultValue={props.values.token}
-                            onChange={handleTokenChange}
-                            disabled={status >= 4}
-                            placeholder="Select Token..."
-                          />
-                          {props.errors.token && <span className="invalid-feedback">{props.errors.token}</span>}
-                        </Form.Group>
                         {
-                          false ? (
+                          false && (
+                          <Form.Group label="TOKEN" className='m-3'>
+                            <SelectToken
+                              name="token"
+                              defaultValue={props.values.token}
+                              onChange={handleTokenChange}
+                              disabled={status >= 4}
+                              placeholder="Select Token..."
+                            />
+                            {props.errors.token && <span className="invalid-feedback">{props.errors.token}</span>}
+                          </Form.Group>
+                          )
+                        }
+                        {
+                          true && (
                             <Form.Group className='m-3'>
                               <Form.Input
                                 label='TOKEN ADDRESS'
@@ -367,7 +407,7 @@ function DispersePaymentPage() {
                                 onChange={handleCustomTokenAddressChanges}
                               />
                             </Form.Group>
-                          ) : <span></span>
+                          )
                         }
                         <Form.Group className='m-3'>
                           <Form.Textarea
