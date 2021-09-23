@@ -47,11 +47,6 @@ function DispersePaymentPage() {
     // 4 - approveTx | 5 - isApproved | 6 - submitTx
     // 7 - complete
 
-  const [formData, setFormData] = useState({
-    token: "",
-    customTokenAddress: "",
-    recipients: null
-  })
   const [tokenData, setTokenData] = useState({
     symbol: '',
     decimals: 0,
@@ -63,13 +58,14 @@ function DispersePaymentPage() {
   const [amountArray, setAmountArray] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
 
-  useEffect(() => {
-    async function parseFormData() {
+  async function parseFormData(customTokenAddress, recipients) {
+    if(web3Context.ready && !_.isUndefined(contracts)) {
       let _validRecipientsData, _addressArray, _amountArray, _totalAmount
+
       // Update parsed recipients text
       try {
-        if(!_.isNull(formData.recipients)) {
-          [_validRecipientsData, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText()
+        if(!_.isNull(recipients)) {
+          [_validRecipientsData, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText(recipients)
            
           setAddressArray(_addressArray)
           setAmountArray(_amountArray)
@@ -85,17 +81,9 @@ function DispersePaymentPage() {
       // Update token data
       let _valueTokenData = false
       try {
-        if(formData.token && formData.token !=='') {
-          setTokenData({
-            symbol: paymagicData.contracts[formData.token]['symbol'],
-            decimals: paymagicData.contracts[formData.token]['decimals'],
-            address: paymagicData.contracts[formData.token]['address'],
-            contract: contracts[formData.token]
-          })
-          _valueTokenData = true
-        } else if(formData.customTokenAddress && formData.customTokenAddress !=='') {
+        if(customTokenAddress && customTokenAddress !=='') {
           const tokenContract = new Contract(
-            formData.customTokenAddress,
+            customTokenAddress,
             paymagicData.contracts['ERC20']['abi'],
             web3Context.provider.getSigner()
           );
@@ -105,12 +93,11 @@ function DispersePaymentPage() {
           setTokenData({
             symbol: _symbol,
             decimals: _decimals.toNumber(),
-            address: formData.customTokenAddress,
+            address: customTokenAddress,
             contract: tokenContract
           })
           _valueTokenData = true
         }
-
       }
       catch(err) {
         console.error(err)
@@ -124,10 +111,7 @@ function DispersePaymentPage() {
         setStatus(2) 
       }
     }
-    if(web3Context.ready && !_.isUndefined(contracts)) {
-      parseFormData();
-    }
-  }, [formData]);
+  }
 
 
   const validateRules = async values => {
@@ -192,7 +176,7 @@ function DispersePaymentPage() {
     return errors;
   };
 
-  async function parseRecipientsText() {
+  async function parseRecipientsText(recipients) {
     let _addressArray = []
     let _amountArray = []
     let _totalAmount = 0
@@ -202,7 +186,7 @@ function DispersePaymentPage() {
       noheader: true,
       trim: true
     })
-    let parsed = await converter.fromString(formData.recipients)
+    let parsed = await converter.fromString(recipients)
 
     try {
       parsed.forEach( (a,i) =>{
@@ -285,7 +269,7 @@ function DispersePaymentPage() {
     )
 
   // console.log(`Status: ${status}`)
-  // console.log(`Form: ${JSON.stringify(formData)}`)
+  // console.log(`Token: ${JSON.stringify(tokenData)}`)
 
   return (
     <SiteWrapper>
@@ -302,7 +286,7 @@ function DispersePaymentPage() {
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    token: formData.token,
+                    token: '',
                     customTokenAddress: '',
                     recipients: '',
                   }}
@@ -311,8 +295,6 @@ function DispersePaymentPage() {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
-                      // console.log(`txStatus ${JSON.stringify(txStatus)}`)
-                      // await sleep(15000)
                       if(txStatus.code && txStatus.code === 4001) {
                         setStatus(3);
                       } else if(status === 6 || status === 5) {
@@ -335,22 +317,10 @@ function DispersePaymentPage() {
                   }}
                 >
                   { props => {
-                    async function handleTokenChange(option) {
-                      const _token = option.value
-                      if(_token) {
-                        setFormData({...formData,
-                          token: _token
-                        })
-                      }
-                      props.setFieldValue('token', _token)
-                    }
-
                     async function handleCustomTokenAddressChanges(event) {
                       const _customTokenAddress = event.currentTarget.value
                       if(_customTokenAddress) {
-                        setFormData({...formData,
-                          customTokenAddress: _customTokenAddress
-                        })
+                        parseFormData(_customTokenAddress, props.values.recipients)
                       }
                       props.setFieldValue('customTokenAddress', _customTokenAddress)
                     }
@@ -358,29 +328,13 @@ function DispersePaymentPage() {
                     async function handleRecipientChanges(event) {
                       const _recipients = event.currentTarget.value
                       if(_recipients) {
-                        setFormData({...formData,
-                          recipients: _recipients
-                        })
+                        parseFormData(props.values.customTokenAddress, _recipients)
                       }
                       props.setFieldValue('recipients', _recipients)
                     }
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
-                        {
-                          false && (
-                          <Form.Group label="TOKEN" className='m-3'>
-                            <SelectToken
-                              name="token"
-                              defaultValue={props.values.token}
-                              onChange={handleTokenChange}
-                              disabled={status >= 4}
-                              placeholder="Select Token..."
-                            />
-                            {props.errors.token && <span className="invalid-feedback">{props.errors.token}</span>}
-                          </Form.Group>
-                          )
-                        }
                         {
                           true && (
                             <Form.Group className='m-3'>

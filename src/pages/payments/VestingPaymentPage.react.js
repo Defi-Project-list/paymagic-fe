@@ -141,25 +141,44 @@ function VestingPaymentPage() {
               <span>{`<< Back`}</span>
             </Link>
             <Card className="mb-1 mt-2"
-              title="Send"
+              title="Create Vesting Agreement"
             >
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    tokenAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC
-                    amount: 0,
-                    recipient: null,
-                    dateRange: null,
-                    cliffDate: null,
-
-                    tokenSymbol: 'USDC',
-                    totalAmount: 0,
-
+                    customTokenAddress: '',
+                    tokenAmount: 0,
+                    recipient: '',
+                    startDate: new Date(),
+                    endDate: new Date(),
+                    cliffDate: new Date()
                   }}
                   validate={ validateRules }
-                  onSubmit={async (values) => {
-                    console.log(values)
-                    // handlePayment
+                  onSubmit={async (values, actions) => {
+                    setLoading(true);
+
+                    const afterMine = async (txStatus) => {
+                      // console.log(`txStatus ${JSON.stringify(txStatus)}`)
+                      // await sleep(15000)
+                      if(txStatus.code && txStatus.code === 4001) {
+                        setStatus(3);
+                      } else if(status === 6 || status === 5) {
+                        setStatus(7);
+                      } else if(status === 4 || status === 3) {
+                        setStatus(5);
+                      }
+                      setLoading(false);
+                    }
+
+                    if(status === 3) {
+                      // ApprovalTx
+                      setStatus(4);
+                      handleApproval(afterMine)
+                    } else {
+                      // SubmitTx
+                      setStatus(6);
+                      handleSubmit(afterMine)
+                    }
                   }}
                 >
                   { props => {
