@@ -26,7 +26,11 @@ import {
   useGasPrice,
   useContractLoader,
 } from "../../hooks";
-import { Transactor, sleep, getTokenIconUriFromAddress, getTokenDataFromAddress } from "../../utils";
+import {
+  Transactor,
+  getTokenIconUriFromAddress,
+  getTokenDataFromAddress,
+  isAddress } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
 
@@ -129,34 +133,19 @@ function DispersePaymentPage() {
   const validateRules = async values => {
     const errors = {};
 
-    // console.log(values)
-
     // CUSTOM TOKEN ADDRESS
     if (!values.customTokenAddress) {
       errors.customTokenAddress = 'Required'
-    } else {
-      try {
-        let temp = ethers.utils.getAddress(values.customTokenAddress)
-        if(!ethers.utils.isAddress(temp))
-          errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
-      } catch {
-        errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
-      }
+    } else if ( !isAddress(values.customTokenAddress) ){
+      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
     }
     
     let validcustomTokenAddress = !_.includes(
       addressArray.map(x => {
-        try {
-          
-          return ethers.utils.isAddress(x)
-        } catch {
-          return false
-        }
+        return !!isAddress(values.customTokenAddress)
       }),
       false
     )
-
-
 
     //TOKEN
     // if (!values.token) {
@@ -175,7 +164,6 @@ function DispersePaymentPage() {
       }),
       false
     )
-
     if (!values.recipients) {
       errors.recipients = 'Required';
     } else if (!validAddresses) {
