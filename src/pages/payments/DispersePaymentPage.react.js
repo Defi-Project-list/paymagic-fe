@@ -14,23 +14,19 @@ import {
   Grid,
   Card,
   Text,
-  // Header,
-  // List,
   Dimmer,
-  // Table,
   Button,
-  // Icon,
-  // Avatar,
   Form
 } from "tabler-react";
 
 import SiteWrapper from "../../SiteWrapper.react";
+import SelectToken from "../../components/SelectToken";
 
 import {
   useGasPrice,
   useContractLoader,
 } from "../../hooks";
-import { Transactor, sleep } from "../../utils";
+import { Transactor, sleep, getTokenIconUriFromAddress, getTokenDataFromAddress } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
 
@@ -46,44 +42,52 @@ function DispersePaymentPage() {
     // 1 - start | 2 - notValid |  3 - isValid
     // 4 - approveTx | 5 - isApproved | 6 - submitTx
     // 7 - complete
-  const [token, setToken] = useState('usdc');
+
+  const [formData, setFormData] = useState({
+    token: "",
+    recipients: null
+  })
+
   const [addressArray, setAddressArray] = useState([]);
   const [amountArray, setAmountArray] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
 
-  // useEffect(() => {
-  //   async function fetchTokenInfo() {
-  //     // Update token balances & allowance
-  //     if(web3Context.ready && !_.isUndefined(contracts)) {
-  //       try {
-  //         let tokenBalanceBN = await contracts[token]["balanceOf"](...[web3Context.address]);
-  //         let _tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[token]['decimals'])
+  useEffect(() => {
+    async function parseFormData() {
+      // Update token balances & allowance
+      try {
+        if(!_.isNull(formData.recipients)) {
+          let [_status, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText()
 
-  //         let tokenAllowanceBN = await contracts[token]["allowance"](...[web3Context.address, paymagicData.contracts.disperse.address]);
-  //         let _tokenAllowance = tokenAllowanceBN.div(10**paymagicData.contracts[token]['decimals'])
+          setStatus(_status)            
+          setAddressArray(_addressArray)
+          setAmountArray(_amountArray)
+          setTotalAmount(_totalAmount)            
+        }
 
-  //         setTokenBalance(_tokenBalance)
-  //         setTokenAllowance(_tokenAllowance)
-  //       }
-  //       catch(err) {
-  //         console.error(err)
-  //       }
-
-  //     }
-  //   }
-  //   fetchTokenInfo();
-  // }, [token, loading]);
+      }
+      catch(err) {
+        console.error(err)
+      }
+    }
+    if(web3Context.ready && !_.isUndefined(contracts)) {
+      parseFormData();
+    }
+  }, [formData]);
 
 
   const validateRules = async values => {
     const errors = {};
 
-    let tokenBalanceBN = await contracts[values.token]["balanceOf"](...[web3Context.address]);
-    let tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[values.token]['decimals'])
+    // console.log(values)
+
+    // CUSTOM TOKEN ADDRESS
+    // if (!values.customTokenAddress) {
+    //   errors.customTokenAddress = 'Required'
+    // }    
 
     // TOKEN
     if (!values.token) {
-      // Check if user has enough tokens
       errors.token = 'Required'
     }
 
@@ -104,16 +108,31 @@ function DispersePaymentPage() {
       errors.recipients = 'Required';
     } else if (!validAddresses) {
       errors.recipients = 'Unable to parse the format. Please try again.';
-    } else if (totalAmount >= 0 && !_.isNumber(totalAmount)) {
-      errors.recipients = 'Unable to parse the format. Please try again.';
-    } else if (tokenBalance.lt(totalAmount)) {
-      errors.recipients = 'Your token balance is too low';
+    }
+
+    if(values.token) {
+      let tokenBalanceBN = await contracts[values.token]["balanceOf"](...[web3Context.address]);
+      console.log(`tokenBalance ${tokenBalanceBN.toString()}`)
+
+      if (totalAmount >= 0 && !_.isNumber(totalAmount)) {
+        errors.recipients = 'Unable to parse the format. Please try again.';
+      }
+
+      if (tokenBalanceBN.lt(
+          ethers.utils.parseUnits(
+            _.toString(totalAmount),
+            paymagicData.contracts[values.token]['decimals']
+          )
+        )
+      ) {
+        errors.recipients = 'Your token balance is too low';
+      }      
     }
 
     return errors;
   };
 
-  async function parseRecipientsText(text) {
+  async function parseRecipientsText() {
     let _addressArray = []
     let _amountArray = []
     let _totalAmount = 0
@@ -123,7 +142,7 @@ function DispersePaymentPage() {
       noheader: true,
       trim: true
     })
-    let parsed = await converter.fromString(text)
+    let parsed = await converter.fromString(formData.recipients)
 
     try {
       parsed.forEach( (a,i) =>{
@@ -132,48 +151,56 @@ function DispersePaymentPage() {
           _.get(a, 'field2', 0)
         )
         _totalAmount = _totalAmount + tempAmount
+        let tempDecimals = formData.token ? paymagicData.contracts[formData.token]['decimals'] : 0
         _amountArray[i] = ethers.utils.parseUnits(
-          _.toString(tempAmount), paymagicData.contracts[token]['decimals']
+          _.toString(tempAmount), tempDecimals
         )
       })
 
-      setStatus(_addressArray.length === _amountArray.length ? 3 : 2)
-      setAddressArray(_addressArray)
-      setAmountArray(_amountArray)
-      setTotalAmount(_totalAmount)
+      let _status = status >= 4 ? status :
+        _addressArray.length === _amountArray.length ? 3 : 2
+
+      return [
+        _status,
+        _addressArray,
+        _amountArray,
+        _totalAmount
+      ]
     }
     catch(err) {
-      setStatus(2)
-      setAddressArray([])
-      setAmountArray([])
-      setTotalAmount(0)
       console.error(err)
+      return [
+        2,
+        [],
+        [],
+        0
+      ]
     }
   }
 
-  function formatDetails(addressArray, amountArray, tokenSymbol) {
+  function formatConfirmationDetails(addressArray, amountArray, tokenSymbol) {
     let tempDetails = addressArray.map((a, i) => {
       let tempBN = amountArray[i] ? amountArray[i] : ethers.BigNumber.from(0)
       let tempNumber = ethers.utils.formatUnits(
-        tempBN, paymagicData.contracts[token]['decimals']
+        tempBN, paymagicData.contracts[formData.token]['decimals']
       )
-      return `${addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${tokenSymbol}\n`
+      return `${addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${tokenSymbol}`
     })
 
-    return `${tempDetails}\nTOTAL\n${numeral(totalAmount).format('0,0.0000')} ${paymagicData.contracts[token]['symbol']}\n`
+    return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(totalAmount).format('0,0.0000')} ${tokenSymbol}\n`
   }
 
   async function handleApproval(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts[token]["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(totalAmount), paymagicData.contracts[token]['decimals'])), cb);
+      tx(contracts[formData.token]["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(totalAmount), paymagicData.contracts[formData.token]['decimals'])), cb);
     }
   }
   
   async function handleSubmit(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](contracts[token]['address'], addressArray, amountArray), cb);
+      tx(contracts['disperse']["disperseTokenSimple"](contracts[formData.token]['address'], addressArray, amountArray), cb);
     }
   }
 
@@ -197,6 +224,9 @@ function DispersePaymentPage() {
       </SiteWrapper>
     )
 
+  console.log(`Status: ${status}`)
+  console.log(`Form: ${JSON.stringify(formData)}`)
+
   return (
     <SiteWrapper>
       <Page.Content title={title} headerClassName="d-flex justify-content-center">
@@ -212,21 +242,23 @@ function DispersePaymentPage() {
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    token: token,
-                    recipients: ''
+                    token: formData.token,
+                    customTokenAddress: null,
+                    recipients: '',
                   }}
                   validate={ validateRules }
                   onSubmit={async (values, actions) => {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
+                      // console.log(`txStatus ${JSON.stringify(txStatus)}`)
                       // await sleep(15000)
-                      if(status === 6 || status === 5) {
+                      if(txStatus.code && txStatus.code === 4001) {
+                        setStatus(3);
+                      } else if(status === 6 || status === 5) {
                         setStatus(7);
                       } else if(status === 4 || status === 3) {
                         setStatus(5);
-                      } else {
-                        setStatus(3);
                       }
                       setLoading(false);
                     }
@@ -243,46 +275,72 @@ function DispersePaymentPage() {
                   }}
                 >
                   { props => {
-                    async function handleTokenChange(event) {
-                      const _token = event.currentTarget.value
+                    async function handleTokenChange(option) {
+                      const _token = option.value
                       if(_token) {
-                        setToken(_token)
+                        setFormData({...formData,
+                          token: _token
+                        })
                       }
-
                       props.setFieldValue('token', _token)
                     }
 
-                    async function handleRecipientChanges(event) {
-                      const _recipientText = event.currentTarget.value
-                      if(_recipientText) {
-                        await parseRecipientsText(_recipientText)
+                    async function handleCustomTokenAddressChanges(event) {
+                      const _customTokenAddress = event.currentTarget.value
+                      if(_customTokenAddress) {
+{/*                        setFormData({...formData,
+                          token: _token
+                        })*/}
                       }
+                      props.setFieldValue('customTokenAddress', _customTokenAddress)
+                    }
 
-                      props.setFieldValue('recipients', _recipientText)
+                    async function handleRecipientChanges(event) {
+                      const _recipients = event.currentTarget.value
+                      if(_recipients) {
+                        setFormData({...formData,
+                          recipients: _recipients
+                        })
+                      }
+                      props.setFieldValue('recipients', _recipients)
                     }
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
-                        <Form.Group className='m-3'>
-                          <Form.Select
+                        <Form.Group label="TOKEN" className='m-3'>
+                          <SelectToken
                             name="token"
-                            label="TOKEN"
-                            value={props.values.token}
-                            error={props.errors.token}
+                            defaultValue={props.values.token}
                             onChange={handleTokenChange}
-                            disabled={status >= 5}
-                          >
-                            <option value='usdc'>
-                              USDC
-                            </option>
-                          </Form.Select>
+                            disabled={status >= 4}
+                            placeholder="Select Token..."
+                          />
+                          {props.errors.token && <span className="invalid-feedback">{props.errors.token}</span>}
+                        </Form.Group>
+                        {
+                          false ? (
+                            <Form.Group className='m-3'>
+                              <Form.Input
+                                label='TOKEN ADDRESS'
+                                name='customTokenAddress'
+                                value={props.values.customTokenAddress}
+                                error={props.errors.customTokenAddress }
+                                className='mb-3'
+                                disabled={status >= 4}
+                                placeholder={`0xa0b8...eb48`}
+                                onChange={handleCustomTokenAddressChanges}
+                              />
+                            </Form.Group>
+                          ) : <span></span>
+                        }
+                        <Form.Group className='m-3'>
                           <Form.Textarea
                             label='RECIPIENTS'
                             name='recipients'
                             value={props.values.recipients}
                             error={props.errors.recipients }
                             className='mb-3 height-200'
-                            disabled={status >= 5}
+                            disabled={status >= 4}
                             placeholder={`0xABCDFA1DC112917c781942Cc01c68521c415e, 1
 0x00192Fb10dF37c9FB26829eb2CC623cd1BF599E8, 2
 0x5a0b54d5dc17e0aadc383d2db43b0a0d3e029c4c, 3
@@ -295,7 +353,7 @@ function DispersePaymentPage() {
                               <div>
                                 <Form.Group label="CONFIRMATION DETAILS">
                                   <Form.StaticText className="whitespace-preline">
-                                    { formatDetails(addressArray, amountArray, paymagicData.contracts[props.values.token]['symbol']) }
+                                    { formatConfirmationDetails(addressArray, amountArray, paymagicData.contracts[props.values.token]['symbol']) }
                                   </Form.StaticText>
                                 </Form.Group>
                               </div>
@@ -320,7 +378,7 @@ function DispersePaymentPage() {
                                 value="Submit"
                                 className="color "
                                 icon={'toggle-left'}
-                                disabled={totalAmount <= 0}
+                                disabled={!(status === 3)}
                                 loading={loading}
                               >
                                 Approve

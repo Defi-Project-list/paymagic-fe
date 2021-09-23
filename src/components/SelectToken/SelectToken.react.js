@@ -7,12 +7,21 @@ import {
 
 type Props = {|
   +children?: React.Node,
-  +tokenSymbol: string,
+  +name?: string,
+  +placeholder?: string,
+  +defaultValue?: string | number,
+  +disabled?: boolean,
+  +onChange?: any,
 |};
 
 function SelectToken({
   children,
-  tokenSymbol,
+  name,
+  value,
+  disabled,
+  onChange,
+  defaultValue,
+  placeholder
 }: Props): React.Node {
 
 // let symbolImage, displayTokenSymbol
@@ -32,14 +41,22 @@ function SelectToken({
   // );
 
 const options = [
-  { value: 'chocolate', label: 'Chocolate' },
-  { value: 'strawberry', label: 'Strawberry' },
-  { value: 'vanilla', label: 'Vanilla' }
+  { value: 'USDC', label: 'USDC' },
+  // { value: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', label: 'USDC' }
+  { value: 'DAI', label: 'DAI' },
+  { value: 'WETH', label: 'wETH' }
 ]
 
   return (
     <React.Fragment>
-  		<Select options={options} />
+  		<Select
+        options={options}
+        name={name}
+        placeholder={placeholder}
+        onChange={onChange}
+        isDisabled={disabled}
+        defaultInputValue={defaultValue}
+      />
     </React.Fragment>
   )
 }

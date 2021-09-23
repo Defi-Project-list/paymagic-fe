@@ -1,5 +1,6 @@
 import moment from 'moment';
 import _ from 'lodash';
+import axios from 'axios';
 // import { Contract } from '@ethersproject/contracts'
 import { getAddress } from '@ethersproject/address'
 // import { AddressZero } from '@ethersproject/constants'
@@ -34,6 +35,37 @@ export function getTokenIconUriFromAddress(tokenAddress) {
     return getTokenIconUriFromSymbol('ETH')
 
   return `${S3_ASSETS}${route}/${address}/logo.png`
+}
+
+// Get token data from address
+export async function getTokenDataFromAddress(tokenAddress) {
+  const route = `/blockchains/ethereum/assets`
+  const address = getAddress(tokenAddress)
+
+  try {
+    const response = await axios.get(`${S3_ASSETS}${route}/${address}/info.json`, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Request-Headers": "*",
+          "Access-Control-Request-Method": "GET"
+        }
+      }
+    );
+    return response.body
+  } catch (error) {
+    console.error(error);
+    return {
+      "name": "USD Coin",
+      "website": "https://centre.io/usdc",
+      "description": "USDC is a fully collateralized US dollar stablecoin, an Ethereum powered coin and is the brainchild of CENTRE, an open source project bootstrapped by contributions from Circle and Coinbase.",
+      "explorer": "https://etherscan.io/token/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "type": "ERC20",
+      "symbol": "USDC",
+      "decimals": 6,
+      "status": "active",
+      "id": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    }
+  }
 }
 
 // Get tokenLogo symbol from address

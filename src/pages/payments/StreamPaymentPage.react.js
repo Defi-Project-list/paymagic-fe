@@ -217,9 +217,11 @@ function StreamPaymentPage() {
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
+                        <Form.Group className='m-3'>
                           <Progress size="sm">
                             <Progress.Bar color='primary' width={30} />
                           </Progress>
+                        </Form.Group>
                         <Form.Group className='m-3'>
                           <Form.Input
                             label='RECIPIENT'
