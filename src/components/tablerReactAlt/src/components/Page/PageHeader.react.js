@@ -14,7 +14,6 @@ type Props = {|
 
 function PageHeader({ children, title, subTitle, className, options }: Props): React.Node {
 
-  console.log(className)
   return (
     <div className={`page-header ${className}`}>
       {title && <PageTitle>{title}</PageTitle>}

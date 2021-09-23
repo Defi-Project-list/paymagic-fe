@@ -60,8 +60,8 @@ class SiteWrapper extends React.PureComponent<Props, State> {
         <Page.Main>
           {header}
           {nav}
-          { false && <Alert type="primary" className="d-flex justify-content-center">
-              <strong>This project is still early! The contracts have NOT been audited! Only use funds you can lose!</strong>
+          { true && <Alert type="warning" className="d-flex justify-content-center">
+              <strong>This is an early project. The contracts have NOT been audited. Be careful!</strong>
             </Alert>
           }
           {children}
