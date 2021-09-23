@@ -45,6 +45,7 @@ function DispersePaymentPage() {
 
   const [formData, setFormData] = useState({
     token: "",
+    customTokenAddress: "",
     recipients: null
   })
   const [tokenData, setTokenData] = useState({
@@ -79,6 +80,13 @@ function DispersePaymentPage() {
       // Update token data
       try {
         if(formData.token && formData.token !=='') {
+          setTokenData({
+            symbol: paymagicData.contracts[formData.token]['symbol'],
+            decimals: paymagicData.contracts[formData.token]['decimals'],
+            address: paymagicData.contracts[formData.token]['address'],
+            contract: contracts[formData.token]
+          })
+        } else if(formData.customTokenAddress && formData.customTokenAddress !=='') {
           setTokenData({
             symbol: paymagicData.contracts[formData.token]['symbol'],
             decimals: paymagicData.contracts[formData.token]['decimals'],
@@ -141,7 +149,6 @@ function DispersePaymentPage() {
 
     if(values.token) {
       let tokenBalanceBN = await contracts[values.token]["balanceOf"](...[web3Context.address]);
-      console.log(`tokenBalance ${tokenBalanceBN.toString()}`)
 
       if (totalAmount >= 0 && !_.isNumber(totalAmount)) {
         errors.recipients = 'Unable to parse the format. Please try again.';
@@ -253,8 +260,8 @@ function DispersePaymentPage() {
       </SiteWrapper>
     )
 
-  console.log(`Status: ${status}`)
-  console.log(`Form: ${JSON.stringify(formData)}`)
+  // console.log(`Status: ${status}`)
+  // console.log(`Form: ${JSON.stringify(formData)}`)
 
   return (
     <SiteWrapper>
@@ -272,7 +279,7 @@ function DispersePaymentPage() {
                 <Formik
                   initialValues={{
                     token: formData.token,
-                    customTokenAddress: null,
+                    customTokenAddress: '',
                     recipients: '',
                   }}
                   validate={ validateRules }
@@ -317,9 +324,9 @@ function DispersePaymentPage() {
                     async function handleCustomTokenAddressChanges(event) {
                       const _customTokenAddress = event.currentTarget.value
                       if(_customTokenAddress) {
-{/*                        setFormData({...formData,
-                          token: _token
-                        })*/}
+                        setFormData({...formData,
+                          customTokenAddress: _customTokenAddress
+                        })
                       }
                       props.setFieldValue('customTokenAddress', _customTokenAddress)
                     }
