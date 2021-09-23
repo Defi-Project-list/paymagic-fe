@@ -1,7 +1,7 @@
 .page {
   font-size: 1rem;
-  background-color: #ebfcf7;
-  background-image: linear-gradient(to right bottom, #dafcf7, #d3f8fc, #d1f2ff, #d5ebff, #dde4ff);
+  background: rgb(251,205,207);
+  background: linear-gradient(168deg, rgba(251,205,207,1) 13%, rgba(196,113,237,1) 41%, rgba(18,194,233,1) 77%);
   font-family: "Segoe UI",'DM Sans', "Helvetica Neue", Arial, sans-serif;
 }
 
