@@ -48,18 +48,18 @@ const navBarItems: Array<navItem> = [
     icon: "credit-card",
     LinkComponent: withRouter(NavLink),
   },
-  {
-    value: "Portfolio",
-    to: "/portfolio",
-    icon: "dollar-sign",
-    LinkComponent: withRouter(NavLink),
-  },
-  {
-    value: "Transactions",
-    to: "/transactions",
-    icon: "layers",
-    LinkComponent: withRouter(NavLink),
-  },
+  // {
+  //   value: "Portfolio",
+  //   to: "/portfolio",
+  //   icon: "dollar-sign",
+  //   LinkComponent: withRouter(NavLink),
+  // },
+  // {
+  //   value: "Transactions",
+  //   to: "/transactions",
+  //   icon: "layers",
+  //   LinkComponent: withRouter(NavLink),
+  // },
 
   // {
   //   value: "DeFi Data",
