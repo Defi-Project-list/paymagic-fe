@@ -60,12 +60,12 @@ function DispersePaymentPage() {
 
   useEffect(() => {
     async function parseFormData() {
+      let _status, _addressArray, _amountArray, _totalAmount
       // Update parsed recipients text
       try {
         if(!_.isNull(formData.recipients)) {
-          let [_status, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText()
-
-          setStatus(_status)            
+          [_status, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText()
+           
           setAddressArray(_addressArray)
           setAmountArray(_amountArray)
           setTotalAmount(_totalAmount)            
@@ -78,7 +78,7 @@ function DispersePaymentPage() {
 
       // Update token data
       try {
-        if(!_.isNull(formData.token)) {
+        if(formData.token && formData.token !=='') {
           setTokenData({
             symbol: paymagicData.contracts[formData.token]['symbol'],
             decimals: paymagicData.contracts[formData.token]['decimals'],
@@ -92,6 +92,12 @@ function DispersePaymentPage() {
         console.error(err)
       }
 
+      // Set validity status
+      if(_status && formData.token && formData.token !=='') {
+        setStatus(3) 
+      } else {
+        setStatus(2) 
+      }
     }
     if(web3Context.ready && !_.isUndefined(contracts)) {
       parseFormData();
@@ -341,7 +347,7 @@ function DispersePaymentPage() {
                           {props.errors.token && <span className="invalid-feedback">{props.errors.token}</span>}
                         </Form.Group>
                         {
-                          true ? (
+                          false ? (
                             <Form.Group className='m-3'>
                               <Form.Input
                                 label='TOKEN ADDRESS'
