@@ -47,6 +47,12 @@ function DispersePaymentPage() {
     token: "",
     recipients: null
   })
+  const [tokenData, setTokenData] = useState({
+    symbol: '',
+    decimals: 0,
+    address: '',
+    contract: '',
+  })
 
   const [addressArray, setAddressArray] = useState([]);
   const [amountArray, setAmountArray] = useState([]);
@@ -54,7 +60,7 @@ function DispersePaymentPage() {
 
   useEffect(() => {
     async function parseFormData() {
-      // Update token balances & allowance
+      // Update parsed recipients text
       try {
         if(!_.isNull(formData.recipients)) {
           let [_status, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText()
@@ -69,6 +75,23 @@ function DispersePaymentPage() {
       catch(err) {
         console.error(err)
       }
+
+      // Update token data
+      try {
+        if(!_.isNull(formData.token)) {
+          setTokenData({
+            symbol: paymagicData.contracts[formData.token]['symbol'],
+            decimals: paymagicData.contracts[formData.token]['decimals'],
+            address: paymagicData.contracts[formData.token]['address'],
+            contract: contracts[formData.token]
+          })
+        }
+
+      }
+      catch(err) {
+        console.error(err)
+      }
+
     }
     if(web3Context.ready && !_.isUndefined(contracts)) {
       parseFormData();
@@ -121,7 +144,7 @@ function DispersePaymentPage() {
       if (tokenBalanceBN.lt(
           ethers.utils.parseUnits(
             _.toString(totalAmount),
-            paymagicData.contracts[values.token]['decimals']
+            tokenData.decimals
           )
         )
       ) {
@@ -151,7 +174,7 @@ function DispersePaymentPage() {
           _.get(a, 'field2', 0)
         )
         _totalAmount = _totalAmount + tempAmount
-        let tempDecimals = formData.token ? paymagicData.contracts[formData.token]['decimals'] : 0
+        let tempDecimals = tokenData.decimals
         _amountArray[i] = ethers.utils.parseUnits(
           _.toString(tempAmount), tempDecimals
         )
@@ -182,7 +205,7 @@ function DispersePaymentPage() {
     let tempDetails = addressArray.map((a, i) => {
       let tempBN = amountArray[i] ? amountArray[i] : ethers.BigNumber.from(0)
       let tempNumber = ethers.utils.formatUnits(
-        tempBN, paymagicData.contracts[formData.token]['decimals']
+        tempBN, tokenData.decimals
       )
       return `${addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${tokenSymbol}`
     })
@@ -193,14 +216,14 @@ function DispersePaymentPage() {
   async function handleApproval(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts[formData.token]["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(totalAmount), paymagicData.contracts[formData.token]['decimals'])), cb);
+      tx(tokenData.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(totalAmount), tokenData.decimals)), cb);
     }
   }
   
   async function handleSubmit(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](contracts[formData.token]['address'], addressArray, amountArray), cb);
+      tx(contracts['disperse']["disperseTokenSimple"](tokenData.address, addressArray, amountArray), cb);
     }
   }
 
@@ -318,7 +341,7 @@ function DispersePaymentPage() {
                           {props.errors.token && <span className="invalid-feedback">{props.errors.token}</span>}
                         </Form.Group>
                         {
-                          false ? (
+                          true ? (
                             <Form.Group className='m-3'>
                               <Form.Input
                                 label='TOKEN ADDRESS'
@@ -353,7 +376,7 @@ function DispersePaymentPage() {
                               <div>
                                 <Form.Group label="CONFIRMATION DETAILS">
                                   <Form.StaticText className="whitespace-preline">
-                                    { formatConfirmationDetails(addressArray, amountArray, paymagicData.contracts[props.values.token]['symbol']) }
+                                    { formatConfirmationDetails(addressArray, amountArray, tokenData.symbol) }
                                   </Form.StaticText>
                                 </Form.Group>
                               </div>
