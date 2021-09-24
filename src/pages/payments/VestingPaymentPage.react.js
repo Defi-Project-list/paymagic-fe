@@ -256,46 +256,12 @@ function VestingPaymentPage() {
                 >
                   { props => {
 
-                    React.useEffect(() => {
+                    useEffect(() => {
                       async function run() {
-                        console.log('start')
-                        {/*await parseFormData(values.customTokenAddress, values.recipients)*/}
-                        console.log('finish')
+                        {await parseFormData(props.values.customTokenAddress, props.values.recipients)}
                       }
                       run()
                     }, [props.values]);
-
-
-                    async function handleCustomTokenAddressChanges(event) {
-                      const _customTokenAddress = event.currentTarget.value
-                      props.setFieldValue('customTokenAddress', _customTokenAddress)
-                      if(_customTokenAddress) {
-                        parseFormData(_customTokenAddress, props.values.recipient)
-                      }
-                    }
-
-                    async function handleTokenAmountChanges(val) {
-                      const _tokenAmount = val.floatValue
-                      props.setFieldValue('tokenAmount', _tokenAmount)
-                      if(_tokenAmount) {
-                        parseFormData(_tokenAmount, props.values.tokenAmount)
-                      }
-                    }
-
-                    async function handleRecipientChanges(event) {
-                      const _recipient = event.currentTarget.value
-                      props.setFieldValue('recipient', _recipient)
-                      if(_recipient) {
-                        parseFormData(props.values.recipient, _recipient)
-                      }
-                    }
-
-                    async function handleDateChange(_date, dateName) {
-                      props.setFieldValue(dateName, _date)
-                      if(_date) {
-                        parseFormData(props.values.customTokenAddress, _date)
-                      }
-                    }
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
@@ -308,7 +274,7 @@ function VestingPaymentPage() {
                             className='mb-3'
                             disabled={status >= 4}
                             placeholder={`0xa0b8...eb48`}
-                            onChange={handleCustomTokenAddressChanges}
+                            onChange={props.handleChange}
                           />
                         </Form.Group>
                         <Form.Group label='AMOUNT' className='m-3'>
@@ -319,7 +285,7 @@ function VestingPaymentPage() {
                             value={props.values.tokenAmount}
                             disabled={status >= 4}
                             className={"form-control"}
-                            onValueChange={handleTokenAmountChanges}
+                            onValueChange={props.handleChange}
                           />
                           {props.errors.tokenAmount && <span className="invalid-feedback">{props.errors.tokenAmount}</span>}
                         </Form.Group>
@@ -332,7 +298,7 @@ function VestingPaymentPage() {
                             disabled={status >= 4}
                             className='mb-3'
                             placeholder={`0xABCDFA1DC112917c781942Cc01c68521c415e`}
-                            onChange={handleRecipientChanges}
+                            onChange={props.handleChange}
                           />
                         </Form.Group>
                         <Form.Group label='START DATE' className='m-3'>
@@ -342,7 +308,7 @@ function VestingPaymentPage() {
                             className="form-control"
                             disabled={status >= 4}
                             name="startDate"
-                            onChange={date => handleDateChange(date, 'startDate')}
+                            onChange={props.handleChange}
                           />
                           {props.errors.startDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.startDate}</span>}
                         </Form.Group>
@@ -353,7 +319,7 @@ function VestingPaymentPage() {
                             className="form-control"
                             disabled={status >= 4}
                             name="cliffDate"
-                            onChange={date => handleDateChange(date, 'cliffDate')}
+                            onChange={props.handleChange}
                           />
                           {props.errors.cliffDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.cliffDate}</span>}
                         </Form.Group>
@@ -364,7 +330,7 @@ function VestingPaymentPage() {
                             className="form-control"
                             disabled={status >= 4}
                             name="endDate"
-                            onChange={date => handleDateChange(date, 'endDate')}
+                            onChange={props.handleChange}
                           />
                           {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
                         </Form.Group>
