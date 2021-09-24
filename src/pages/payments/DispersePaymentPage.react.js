@@ -185,18 +185,6 @@ function DispersePaymentPage() {
     } else if ( !isAddress(values.customTokenAddress) ){
       errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
     }
-    
-    let validcustomTokenAddress = !_.includes(
-      parsedData.addressArray.map(x => {
-        return !!isAddress(values.customTokenAddress)
-      }),
-      false
-    )
-
-    //TOKEN
-    // if (!values.token) {
-    //   errors.token = 'Required'
-    // }
 
     // RECIPIENTS    
     let validAddresses = !_.includes(
@@ -298,40 +286,27 @@ function DispersePaymentPage() {
                   }}
                 >
                   { props => {
-                    async function handleCustomTokenAddressChanges(event) {
-                      const _customTokenAddress = event.currentTarget.value
-                      props.setFieldValue('customTokenAddress', _customTokenAddress)
-                      if(_customTokenAddress) {
-                        parseFormData(_customTokenAddress, props.values.recipients)
+                    useEffect(() => {
+                      async function run() {
+                        await parseFormData(props.values.customTokenAddress, props.values.recipients)
                       }
-                    }
-
-                    async function handleRecipientChanges(event) {
-                      const _recipients = event.currentTarget.value
-                      props.setFieldValue('recipients', _recipients)
-                      if(_recipients) {
-                        parseFormData(props.values.customTokenAddress, _recipients)
-                      }
-                    }
+                      run()
+                    }, [props.values]);
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
-                        {
-                          true && (
-                            <Form.Group className='m-3'>
-                              <Form.Input
-                                label='TOKEN ADDRESS'
-                                name='customTokenAddress'
-                                value={props.values.customTokenAddress}
-                                error={props.errors.customTokenAddress }
-                                className='mb-3'
-                                disabled={status >= 4}
-                                placeholder={`0xa0b8...eb48`}
-                                onChange={handleCustomTokenAddressChanges}
-                              />
-                            </Form.Group>
-                          )
-                        }
+                        <Form.Group className='m-3'>
+                          <Form.Input
+                            label='TOKEN ADDRESS'
+                            name='customTokenAddress'
+                            value={props.values.customTokenAddress}
+                            error={props.errors.customTokenAddress }
+                            className='mb-3'
+                            disabled={status >= 4}
+                            placeholder={`0xa0b8...eb48`}
+                            onChange={props.handleChange}
+                          />
+                        </Form.Group>
                         <Form.Group className='m-3'>
                           <Form.Textarea
                             label='RECIPIENTS'
@@ -345,15 +320,13 @@ function DispersePaymentPage() {
 0x5a0b54d5dc17e0aadc383d2db43b0a0d3e029c4c, 3
 0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8, 4
 ...`}
-                            onChange={handleRecipientChanges}
+                            onChange={props.handleChange}
                           />
-                          <div>
-                            <Form.Group label="CONFIRMATION DETAILS">
-                              <Form.StaticText className="whitespace-preline">
-                                { parsedData.confirmationDetails }
-                              </Form.StaticText>
-                            </Form.Group>
-                          </div>
+                          <Form.Group label="CONFIRMATION DETAILS">
+                            <Form.StaticText className="whitespace-preline">
+                              { parsedData.confirmationDetails }
+                            </Form.StaticText>
+                          </Form.Group>
                           { 
                             (status >= 5) ? (
                               <Button

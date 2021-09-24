@@ -4,43 +4,37 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
-import { Formik, useFormik, FormikProvider, useField } from 'formik';
-import * as Yup from 'yup';
-import NumberFormat from 'react-number-format';
-import * as csv from 'csvtojson'
-
-import {
-  Page,
-  Grid,
-  Card,
-  Text,
-  Header,
-  List,
-  Dimmer,
-  Table,
-  Button,
-  Icon,
-  Avatar,
-  Form
-} from "tabler-react";
-
-import DepositWithdrawTokensForm from "../../components/DepositWithdrawTokensForm";
-import InputTokenAmountForm from "../../components/InputTokenAmountForm";
+import { ethers, Contract } from "ethers";
+import { Formik } from 'formik';
+import Confetti from 'react-confetti'
 
 
 import SiteWrapper from "../../SiteWrapper.react";
-import TokenBalanceCard from "../../components/TokenBalanceCard";
-import TxCard from "../../components/TxCard";
-import DateRangePicker from '@wojtekmaj/react-daterange-picker';
-import DatePicker from 'react-date-picker'
+import Page from '../../components/tablerReactAlt/src/components/Page'
+import {
+  Grid,
+  Card,
+  Text,
+  Dimmer,
+  Button,
+  Form
+} from "tabler-react";
+import SelectToken from "../../components/SelectToken";
+import NumberFormat from 'react-number-format';
+import DatePicker from 'react-datepicker'
+import "react-datepicker/dist/react-datepicker.css";
 
 import {
   useGasPrice,
   useContractLoader,
-  useInterval,
 } from "../../hooks";
-import { GetAccountBalances, Transactor } from "../../utils";
+import {
+  Transactor,
+  getTokenIconUriFromAddress,
+  getTokenDataFromAddress,
+  isAddress } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
+import { default as paymagicData } from "../../data";
 
 
 function VestingPaymentPage() {
@@ -49,99 +43,172 @@ function VestingPaymentPage() {
   const gasPrice = useGasPrice("fast")
   const contracts = useContractLoader(web3Context.provider);
 
-  const [totalAmount, setTotalAmount] = useState(0);
-  const [recipientDetails, setRecipientDetails] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(1);
+    // 1 - start | 2 - notValid |  3 - isValid
+    // 4 - deployTx | 5 - isDeployed | 6 - sendTx
+    // 7 - complete
 
-  const validateRules = values => {
+  const [tokenData, setTokenData] = useState({
+    symbol: '',
+    decimals: 0,
+    address: '',
+    contract: ''
+  })
+  const [parsedData, setParsedData] = useState({
+    token: {
+      symbol: '',
+      decimals: 0,
+      address: '',
+      contract: ''
+    },
+
+    tokenAmountBN: ethers.BigNumber.from(0),
+    recipient: '',
+
+    currentDate: new Date (),
+    startDateBlock: 0,
+    cliffDateBlock: 0,
+    endDateBlock: 0
+  })
+
+  async function parseFormData(customTokenAddress, recipients) {
+    if(web3Context.ready && !_.isUndefined(contracts)) {
+
+      // Update token data
+      let _valueTokenData = false
+      try {
+        if(customTokenAddress && customTokenAddress !=='') {
+          const tokenContract = new Contract(
+            customTokenAddress,
+            paymagicData.contracts['ERC20']['abi'],
+            web3Context.provider.getSigner()
+          );
+          let _symbol = await tokenContract.symbol()
+          let _decimals = await tokenContract.decimals()
+
+          setTokenData({
+            symbol: _symbol,
+            decimals: _decimals.toNumber(),
+            address: customTokenAddress,
+            contract: tokenContract
+          })
+          _valueTokenData = true
+        }
+      }
+      catch(err) {
+        console.error(err)
+        setStatus(2)
+      }
+
+      // Set validity status
+      if(_valueTokenData) {
+        setStatus(3) 
+      } else {
+        setStatus(2) 
+      }
+    }
+  }
+
+  // function formatConfirmationDetails(_addressArray, _amountArray, _totalAmount, _tokenSymbol) {
+  //   let tempDetails = _addressArray.map((a, i) => {
+  //     let tempBN = _amountArray[i] ? _amountArray[i] : ethers.BigNumber.from(0)
+  //     let tempNumber = ethers.utils.formatUnits(
+  //       tempBN, tokenData.decimals
+  //     )
+  //     return `${_addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${_tokenSymbol}`
+  //   })
+
+  //   return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${_tokenSymbol}\n`
+  // }
+
+  const validateRules = async values => {
     const errors = {};
 
-    // AMOUNT
-    if (!values.amount) {
-      errors.amount = 'Required';
-    } else if (false) {
-      // User has enough tokens
-    
-    // RECIPIENT
+    // CUSTOM TOKEN ADDRESS
+    if (!values.customTokenAddress) {
+      errors.customTokenAddress = 'Required'
+    } else if ( !isAddress(values.customTokenAddress) ){
+      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
     }
 
-    if (!values.recipient) {
-      errors.recipient = 'Required';
-    } else if (false) {
-      // Valid address
+    // TOKEN AMOUNT
+    if (!values.tokenAmount) {
+      errors.tokenAmount = 'Required'
     }
-    
-    // DATERANGE
-    if (!values.dateRange) {
-      errors.dateRange = 'Required';
-    
-    // CLIFFDATE
-    } else if (!values.cliffDate) {
-      errors.cliffDate = 'Required';
-    } else if (false) {
-      // Cliff date between date range
+
+    // Validate Token Balance
+    if(tokenData.contract) {
+      let tokenBalanceBN = await tokenData.contract["balanceOf"](...[web3Context.address]);
+
+      if (values.tokenAmount <= 0 && !_.isNumber(values.tokenAmount)) {
+        errors.tokenAmount = 'Unable to parse amount. Please try again.';
+      }
+
+      if (tokenBalanceBN.lt(
+          ethers.utils.parseUnits(
+            _.toString(values.tokenAmount),
+            tokenData.decimals
+          )
+        )
+      ) {
+        errors.tokenAmount = 'Your token balance is too low';
+      }    
+    }
+
+    // RECIPIENTS
+    if (!values.recipient) {
+      errors.recipient = 'Required'
+    } else if ( !isAddress(values.recipient) ){
+      errors.recipient = 'Unable to parse the address. Please try again.'
+    }
+
+    // DATES
+    if (!values.startDate) {
+      errors.startDate = 'Required'
+    } else if(!values.cliffDate) {
+      errors.cliffDate = 'Required'
+    } else if(!values.endDate) {
+      errors.endDate = 'Required'
+    } else {
+      if (values.startDate > values.cliffDate) {
+        errors.cliffDate = 'Cliff date must be on or after start date.'
+      } else if(values.startDate >= values.endDate) {
+        errors.endDate = 'End date must be after start date.'
+      } else if(values.cliffDate > values.endDate) {
+        errors.endDate = 'Cliff date must be before or on end date.'
+      }
     }
 
     return errors;
   };
+
+  async function handleDeploy(cb) {
+    if(web3Context.ready) {
+      const tx = Transactor(web3Context.provider, cb, gasPrice);
+      tx(tokenData.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), tokenData.decimals)), cb);
+    }
+  }
   
-  // async function handleApproval(amount, cb) {
-  //   if(web3Context.ready) {
-  //     const tx = Transactor(web3Context.provider, cb, gasPrice);
-  //     // let weiAmount = ethers.utils.parseUnits(amount.toString(), item.coreTokenDecimals);
-  //     // const allowanceAmount = await contracts[item.coreTokenSymbol]["allowance"](...[web3Context.address, item.pTokenAddress]);
-
-  //     tx(contracts[item.coreTokenSymbol]["approve"](item.pTokenAddress, ethers.utils.parseUnits('1000000',item.coreTokenDecimals)), cb);
-        
-  //   }
-  // }
-
-  // async function handlePayment(amount, cb) {
-  //   if(web3Context.ready) {
-  //     const tx = Transactor(web3Context.provider, cb, gasPrice);
-  //     let weiAmount = ethers.utils.parseUnits(amount.toString(), item.coreTokenDecimals);
-  //     const allowanceAmount = await contracts[item.coreTokenSymbol]["allowance"](...[web3Context.address, item.pTokenAddress]);
-
-  //     if(weiAmount.lte(allowanceAmount)) {
-  //       tx(contracts[item.pTokenSymbol]["deposit"](weiAmount), cb);
-  //     } 
-  //   }
-  // }
-
-  const title = `📈 Vesting Agreement`
-
-  if(!web3Context.ready)
-    return (
-      <SiteWrapper>
-        <Page.Content title={title} headerClassName="d-flex justify-content-center">
-          <Card><Card.Body><Text className="text-center font-italic">Connect Wallet Above<span role="img">👆</span></Text></Card.Body></Card>
-        </Page.Content>
-      </SiteWrapper>
-    )
-
-  if(walletContext.loading)
-    return (
-      <SiteWrapper>
-        <Page.Content title={title} headerClassName="d-flex justify-content-center">
-          <Dimmer active loader className="mt-8"/>
-        </Page.Content>
-      </SiteWrapper>
-    )
-
-
-
-
+  async function handleSend(cb) {
+    if(web3Context.ready) {
+      const tx = Transactor(web3Context.provider, cb, gasPrice);
+      tx(contracts['disperse']["disperseTokenSimple"](tokenData.address, parsedData.addressArray, parsedData.amountArray), cb);
+    }
+  }
 
 
   return (
     <SiteWrapper>
-      <Page.Content title={title} headerClassName="d-flex justify-content-center">
+      <Page.Content title={`Vesting Agreement`} headerClassName="d-flex justify-content-center" web3ContextReady={web3Context.ready} walletContextLoading={walletContext.loading}>
+        { status === 7 ? <Confetti/> : <span/> }
         <Grid.Row className="d-flex justify-content-center">
           <Grid.Col lg={8}>
             <Link to="/payments">
               <span>{`<< Back`}</span>
             </Link>
-            <Card className="mb-1 mt-2"
-              title="Create Vesting Agreement"
+            <Card className="mb-1 mt-1"
+              title="Create new Vesting Agreement"
             >
               <Card.Body className="p-1">
                 <Formik
@@ -149,17 +216,23 @@ function VestingPaymentPage() {
                     customTokenAddress: '',
                     tokenAmount: 0,
                     recipient: '',
-                    startDate: new Date(),
-                    endDate: new Date(),
-                    cliffDate: new Date()
+                    startDate: parsedData.currentDate,
+                    endDate: new Date(
+                      parsedData.currentDate.getFullYear()+4,
+                      parsedData.currentDate.getMonth(),
+                      parsedData.currentDate.getDate()
+                    ),
+                    cliffDate: new Date(
+                      parsedData.currentDate.getFullYear()+1,
+                      parsedData.currentDate.getMonth(),
+                      parsedData.currentDate.getDate()
+                    )
                   }}
                   validate={ validateRules }
                   onSubmit={async (values, actions) => {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
-                      // console.log(`txStatus ${JSON.stringify(txStatus)}`)
-                      // await sleep(15000)
                       if(txStatus.code && txStatus.code === 4001) {
                         setStatus(3);
                       } else if(status === 6 || status === 5) {
@@ -173,44 +246,82 @@ function VestingPaymentPage() {
                     if(status === 3) {
                       // ApprovalTx
                       setStatus(4);
-                      handleApproval(afterMine)
+                      handleDeploy(afterMine)
                     } else {
                       // SubmitTx
                       setStatus(6);
-                      handleSubmit(afterMine)
+                      handleSend(afterMine)
                     }
                   }}
                 >
                   { props => {
-                    console.log(props.errors)
+
+                    React.useEffect(() => {
+                      async function run() {
+                        console.log('start')
+                        {/*await parseFormData(values.customTokenAddress, values.recipients)*/}
+                        console.log('finish')
+                      }
+                      run()
+                    }, [props.values]);
+
+
+                    async function handleCustomTokenAddressChanges(event) {
+                      const _customTokenAddress = event.currentTarget.value
+                      props.setFieldValue('customTokenAddress', _customTokenAddress)
+                      if(_customTokenAddress) {
+                        parseFormData(_customTokenAddress, props.values.recipient)
+                      }
+                    }
+
+                    async function handleTokenAmountChanges(val) {
+                      const _tokenAmount = val.floatValue
+                      props.setFieldValue('tokenAmount', _tokenAmount)
+                      if(_tokenAmount) {
+                        parseFormData(_tokenAmount, props.values.tokenAmount)
+                      }
+                    }
+
+                    async function handleRecipientChanges(event) {
+                      const _recipient = event.currentTarget.value
+                      props.setFieldValue('recipient', _recipient)
+                      if(_recipient) {
+                        parseFormData(props.values.recipient, _recipient)
+                      }
+                    }
+
+                    async function handleDateChange(_date, dateName) {
+                      props.setFieldValue(dateName, _date)
+                      if(_date) {
+                        parseFormData(props.values.customTokenAddress, _date)
+                      }
+                    }
+
                     return (
                       <Form onSubmit={props.handleSubmit}>
                         <Form.Group className='m-3'>
-                          <Form.Select
-                            name="tokenAddress"
-                            label="TOKEN"
-                            value={props.values.tokenAddress}
-                            error={props.errors.tokenAddress}
-                            onChange={props.handleChange}
-                          >
-                            <option value="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48">
-                              USDC
-                            </option>
-                            <option value="0x6b175474e89094c44da98b954eedeac495271d0f">
-                              DAI
-                            </option>
-                          </Form.Select>
+                          <Form.Input
+                            label='TOKEN ADDRESS'
+                            name='customTokenAddress'
+                            value={props.values.customTokenAddress}
+                            error={props.errors.customTokenAddress }
+                            className='mb-3'
+                            disabled={status >= 4}
+                            placeholder={`0xa0b8...eb48`}
+                            onChange={handleCustomTokenAddressChanges}
+                          />
                         </Form.Group>
                         <Form.Group label='AMOUNT' className='m-3'>
                           <NumberFormat
-      		                  placeholder="0.00"
-      		                  isNumericString={true}
-      		                  thousandSeparator={true}
-      		                  value={props.values.amount}
-      		                  className={"form-control"}
-      		                  onValueChange={val => props.setFieldValue('amount', val.floatValue)}
-      		                />
-                          {props.errors.amount && <span className="invalid-feedback">{props.errors.amount}</span>}
+                            placeholder="0.00"
+                            isNumericString={true}
+                            thousandSeparator={true}
+                            value={props.values.tokenAmount}
+                            disabled={status >= 4}
+                            className={"form-control"}
+                            onValueChange={handleTokenAmountChanges}
+                          />
+                          {props.errors.tokenAmount && <span className="invalid-feedback">{props.errors.tokenAmount}</span>}
                         </Form.Group>
                         <Form.Group className='m-3'>
                           <Form.Input
@@ -218,43 +329,82 @@ function VestingPaymentPage() {
                             name='recipient'
                             value={props.values.recipient}
                             error={props.errors.recipient }
+                            disabled={status >= 4}
                             className='mb-3'
                             placeholder={`0xABCDFA1DC112917c781942Cc01c68521c415e`}
-                            onChange={props.handleChange}
+                            onChange={handleRecipientChanges}
                           />
                         </Form.Group>
-                        <Form.Group label='VESTING START & END DATES' className='m-3'>
-                          <DateRangePicker
-                            onChange={props.handleChange}
-                            value={props.values.dateRange}
+                        <Form.Group label='START DATE' className='m-3'>
+                          <DatePicker 
+                            selected={props.values.startDate}
+                            dateFormat="MMMM d, yyyy"
+                            className="form-control"
+                            disabled={status >= 4}
+                            name="startDate"
+                            onChange={date => handleDateChange(date, 'startDate')}
                           />
-                          {props.errors.dateRange && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.dateRange}</span>}
+                          {props.errors.startDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.startDate}</span>}
                         </Form.Group>
                         <Form.Group label='CLIFF DATE' className='m-3'>
-                          <DatePicker
-                            onChange={props.handleChange}
-                            value={props.values.cliffDate}
+                          <DatePicker 
+                            selected={props.values.cliffDate}
+                            dateFormat="MMMM d, yyyy"
+                            className="form-control"
+                            disabled={status >= 4}
+                            name="cliffDate"
+                            onChange={date => handleDateChange(date, 'cliffDate')}
                           />
                           {props.errors.cliffDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.cliffDate}</span>}
                         </Form.Group>
-                        <Form.Group className='m-3 mt-5'>
-                          <Button
-                            color="primary"
-                            type="submit"
-                            value="Submit"
-                            className="color "
-                            icon={'toggle-left'}
-                            disabled={false}
-                          >
-                            Start
-                          </Button>
+                        <Form.Group label='END DATE' className='m-3'>
+                          <DatePicker 
+                            selected={props.values.endDate}
+                            dateFormat="MMMM d, yyyy"
+                            className="form-control"
+                            disabled={status >= 4}
+                            name="endDate"
+                            onChange={date => handleDateChange(date, 'endDate')}
+                          />
+                          {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
+                        </Form.Group>
+                        <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
+                          <Form.StaticText className="whitespace-preline">
+                            { parsedData.confirmationDetails }
+                          </Form.StaticText>
+                        </Form.Group>
+                        <Form.Group className='m-3'>
+                          { 
+                            (status >= 5) ? (
+                              <Button
+                                color="primary"
+                                type="submit"
+                                value="Submit"
+                                className="color "
+                                icon={'send'}
+                                disabled={status >= 7}
+                                loading={loading}
+                              >
+                                Send tokens
+                              </Button> ) : (
+                              <Button
+                                color="primary"
+                                type="submit"
+                                value="Submit"
+                                className="color "
+                                icon={'toggle-left'}
+                                disabled={!(status === 3)}
+                                loading={loading}
+                              >
+                                Initiate
+                              </Button>
+                            )
+                          }
                         </Form.Group>
                       </Form>
                     )
                   }
                 }
-
-                
                 </Formik>
               </Card.Body>
             </Card>
