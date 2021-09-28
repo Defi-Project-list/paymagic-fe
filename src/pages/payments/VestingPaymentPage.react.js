@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
 import { ethers, Contract } from "ethers";
+import * as EthDater from 'ethereum-block-by-date'
 import { Formik } from 'formik';
 import Confetti from 'react-confetti'
 
@@ -32,6 +33,7 @@ import {
   Transactor,
   getTokenIconUriFromAddress,
   getTokenDataFromAddress,
+  getAddress,
   isAddress } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
@@ -49,12 +51,6 @@ function VestingPaymentPage() {
     // 4 - deployTx | 5 - isDeployed | 6 - sendTx
     // 7 - complete
 
-  const [tokenData, setTokenData] = useState({
-    symbol: '',
-    decimals: 0,
-    address: '',
-    contract: ''
-  })
   const [parsedData, setParsedData] = useState({
     token: {
       symbol: '',
@@ -67,39 +63,67 @@ function VestingPaymentPage() {
     recipient: '',
 
     currentDate: new Date (),
-    startDateBlock: 0,
-    cliffDateBlock: 0,
-    endDateBlock: 0
+    startDate: {},
+    cliffDate: {},
+    endDate: {},
+
+    confirmationDetails: ''
   })
 
-  async function parseFormData(customTokenAddress, recipients) {
-    if(web3Context.ready && !_.isUndefined(contracts)) {
+  async function parseFormData(values, errors) {
+    // console.log('---Parse Form Data---')
+    // console.log(`values ${JSON.stringify(values)}`)
+    // console.log(`errors ${JSON.stringify(errors)}`)
+    // console.log(`old parsed data ${JSON.stringify(parsedData)}`)
 
-      // Update token data
+    let _parsedData = parsedData
+    if(web3Context.ready) {
+      // TOKEN ADDRESS
       let _valueTokenData = false
-      try {
-        if(customTokenAddress && customTokenAddress !=='') {
-          const tokenContract = new Contract(
-            customTokenAddress,
+      let _token = parsedData.token
+      if(_.isUndefined(errors.customTokenAddress) && isAddress(values.customTokenAddress)) {
+        try {
+          _token.contract = new Contract(
+            getAddress(values.customTokenAddress),
             paymagicData.contracts['ERC20']['abi'],
             web3Context.provider.getSigner()
           );
-          let _symbol = await tokenContract.symbol()
-          let _decimals = await tokenContract.decimals()
-
-          setTokenData({
-            symbol: _symbol,
-            decimals: _decimals.toNumber(),
-            address: customTokenAddress,
-            contract: tokenContract
-          })
+          _token.address = values.customTokenAddress
+          _token.symbol = await _token.contract.symbol()
+          _token.decimals = await _token.contract.decimals()
           _valueTokenData = true
         }
+        catch(err) {
+          console.error(err)
+          setStatus(2)
+        }
       }
-      catch(err) {
+
+      // TOKEN AMOUNT
+      try {
+        _parsedData.tokenAmountBN = ethers.BigNumber.from(values.tokenAmount)
+      } catch(err) {
         console.error(err)
-        setStatus(2)
+        _parsedData.tokenAmountBN = ethers.BigNumber.from(0)
       }
+
+      // RECIPIENT
+      _parsedData.recipient = getAddress(values.recipient)
+
+      // DATES
+      // Convert to block numbers
+      const dater = new EthDater(
+        web3Context.provider
+      )
+      _parsedData.startDate = await dater.getDate(values.startDate)
+      _parsedData.cliffDate = await dater.getDate(values.cliffDate)
+      _parsedData.endDate = await dater.getDate(values.endDate)
+
+
+      // confirmationDetails
+
+      console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
+      await setParsedData(_parsedData)
 
       // Set validity status
       if(_valueTokenData) {
@@ -114,7 +138,7 @@ function VestingPaymentPage() {
   //   let tempDetails = _addressArray.map((a, i) => {
   //     let tempBN = _amountArray[i] ? _amountArray[i] : ethers.BigNumber.from(0)
   //     let tempNumber = ethers.utils.formatUnits(
-  //       tempBN, tokenData.decimals
+  //       tempBN, parsedData.token.decimals
   //     )
   //     return `${_addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${_tokenSymbol}`
   //   })
@@ -130,33 +154,33 @@ function VestingPaymentPage() {
       errors.customTokenAddress = 'Required'
     } else if ( !isAddress(values.customTokenAddress) ){
       errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
-    }
+    }   
+
+
+
 
     // TOKEN AMOUNT
     if (!values.tokenAmount) {
       errors.tokenAmount = 'Required'
+    } else if (values.tokenAmount <= 0 || !_.isNumber(values.tokenAmount)) {
+      errors.tokenAmount = 'Unable to parse amount. Please try again.';
     }
 
-    // Validate Token Balance
-    if(tokenData.contract) {
-      let tokenBalanceBN = await tokenData.contract["balanceOf"](...[web3Context.address]);
-
-      if (values.tokenAmount <= 0 && !_.isNumber(values.tokenAmount)) {
-        errors.tokenAmount = 'Unable to parse amount. Please try again.';
-      }
-
+    if (parsedData.token.contract) {
+      // VALIDATE TOKEN BALANCE
+      let tokenBalanceBN = await parsedData.token.contract["balanceOf"](...[web3Context.address]);
       if (tokenBalanceBN.lt(
           ethers.utils.parseUnits(
             _.toString(values.tokenAmount),
-            tokenData.decimals
+            parsedData.token.decimals
           )
         )
       ) {
         errors.tokenAmount = 'Your token balance is too low';
-      }    
+      }  
     }
 
-    // RECIPIENTS
+    // RECIPIENT
     if (!values.recipient) {
       errors.recipient = 'Required'
     } else if ( !isAddress(values.recipient) ){
@@ -186,14 +210,14 @@ function VestingPaymentPage() {
   async function handleDeploy(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(tokenData.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), tokenData.decimals)), cb);
+      tx(parsedData.token.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), parsedData.token.decimals)), cb);
     }
   }
   
   async function handleSend(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](tokenData.address, parsedData.addressArray, parsedData.amountArray), cb);
+      tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray), cb);
     }
   }
 
@@ -214,7 +238,7 @@ function VestingPaymentPage() {
                 <Formik
                   initialValues={{
                     customTokenAddress: '',
-                    tokenAmount: 0,
+                    tokenAmount: 10,
                     recipient: '',
                     startDate: parsedData.currentDate,
                     endDate: new Date(
@@ -258,7 +282,7 @@ function VestingPaymentPage() {
 
                     useEffect(() => {
                       async function run() {
-                        {await parseFormData(props.values.customTokenAddress, props.values.recipients)}
+                        await parseFormData(props.values, props.errors)
                       }
                       run()
                     }, [props.values]);
@@ -280,12 +304,13 @@ function VestingPaymentPage() {
                         <Form.Group label='AMOUNT' className='m-3'>
                           <NumberFormat
                             placeholder="0.00"
+                            allowNegative={false}
                             isNumericString={true}
                             thousandSeparator={true}
                             value={props.values.tokenAmount}
                             disabled={status >= 4}
                             className={"form-control"}
-                            onValueChange={props.handleChange}
+                            onValueChange={val => props.setFieldValue('tokenAmount',val.value)}
                           />
                           {props.errors.tokenAmount && <span className="invalid-feedback">{props.errors.tokenAmount}</span>}
                         </Form.Group>
@@ -297,7 +322,7 @@ function VestingPaymentPage() {
                             error={props.errors.recipient }
                             disabled={status >= 4}
                             className='mb-3'
-                            placeholder={`0xABCDFA1DC112917c781942Cc01c68521c415e`}
+                            placeholder={`0xe2B5...ab24`}
                             onChange={props.handleChange}
                           />
                         </Form.Group>
@@ -308,7 +333,7 @@ function VestingPaymentPage() {
                             className="form-control"
                             disabled={status >= 4}
                             name="startDate"
-                            onChange={props.handleChange}
+                            onChange={val => props.setFieldValue('startDate',val)}
                           />
                           {props.errors.startDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.startDate}</span>}
                         </Form.Group>
@@ -319,7 +344,7 @@ function VestingPaymentPage() {
                             className="form-control"
                             disabled={status >= 4}
                             name="cliffDate"
-                            onChange={props.handleChange}
+                            onChange={val => props.setFieldValue('cliffDate',val)}
                           />
                           {props.errors.cliffDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.cliffDate}</span>}
                         </Form.Group>
@@ -330,7 +355,7 @@ function VestingPaymentPage() {
                             className="form-control"
                             disabled={status >= 4}
                             name="endDate"
-                            onChange={props.handleChange}
+                            onChange={val => props.setFieldValue('endDate',val)}
                           />
                           {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
                         </Form.Group>
@@ -351,7 +376,7 @@ function VestingPaymentPage() {
                                 disabled={status >= 7}
                                 loading={loading}
                               >
-                                Send tokens
+                                Fund with tokens
                               </Button> ) : (
                               <Button
                                 color="primary"
@@ -359,10 +384,10 @@ function VestingPaymentPage() {
                                 value="Submit"
                                 className="color "
                                 icon={'toggle-left'}
-                                disabled={!(status === 3)}
+                                disabled={status < 3 || !_.isEmpty(props.errors)}
                                 loading={loading}
                               >
-                                Initiate
+                                Initiate Agreement
                               </Button>
                             )
                           }

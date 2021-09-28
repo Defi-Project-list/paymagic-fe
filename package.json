@@ -21,6 +21,7 @@
     "csvtojson": "^2.0.10",
     "d3-scale": "^3.0.0",
     "eth-hooks": "^1.1.2",
+    "ethereum-block-by-date": "^1.4.2",
     "ethers": "^5.1.0",
     "formik": "^2.2.6",
     "graphql": "^15.5.0",

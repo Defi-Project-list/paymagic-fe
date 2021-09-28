@@ -1,8 +1,8 @@
 import moment from 'moment';
 import _ from 'lodash';
 import axios from 'axios';
-// import { Contract } from '@ethersproject/contracts'
-import { getAddress } from '@ethersproject/address'
+import { ethers, Contract } from "ethers";
+import { getAddress as getAddressEthers } from '@ethersproject/address'
 // import { AddressZero } from '@ethersproject/constants'
 import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers'
 // import { BigNumber } from '@ethersproject/bignumber'
@@ -29,7 +29,7 @@ export function sleep(ms) {
 // Get tokenLogo URI from address
 export function getTokenIconUriFromAddress(tokenAddress) {
   const route = `/blockchains/ethereum/assets`
-  const address = getAddress(tokenAddress)
+  const address = getAddressEthers(tokenAddress)
 
   if(tokenAddress === `0x0000000000000000000000000000000000000000`)
     return getTokenIconUriFromSymbol('ETH')
@@ -40,7 +40,7 @@ export function getTokenIconUriFromAddress(tokenAddress) {
 // Get token data from address
 export async function getTokenDataFromAddress(tokenAddress) {
   const route = `/blockchains/ethereum/assets`
-  const address = getAddress(tokenAddress)
+  const address = getAddressEthers(tokenAddress)
 
   try {
     const response = await axios.get(`${S3_ASSETS}${route}/${address}/info.json`, {
@@ -76,9 +76,19 @@ export function getTokenIconUriFromSymbol(symbol) {
 // // returns the checksummed address if the address is valid, otherwise returns false
 export function isAddress(value: any): string | false {
   try {
-    return getAddress(value)
+    return ethers.utils.isAddress(value)
+    // return getAddressEthers(value)
   } catch {
     return false
+  }
+}
+
+// // returns the checksummed address if the address is valid, otherwise returns input
+export function getAddress(value: any): string | false {
+  try {
+    return getAddressEthers(value)
+  } catch {
+    return value
   }
 }
 
@@ -116,7 +126,7 @@ export function getEtherscanLink(
 
 // shorten the checksummed version of the input address to have 0x + 4 characters at start and end
 export function shortenAddress(address: string, chars = 4): string {
-  const parsed = isAddress(address)
+  const parsed = getAddress(address)
   if (!parsed) {
     throw Error(`Invalid 'address' parameter '${address}'.`)
   }
