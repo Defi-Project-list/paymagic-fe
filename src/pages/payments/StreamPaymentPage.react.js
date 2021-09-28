@@ -4,41 +4,43 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
-import { ethers } from "ethers";
+import { ethers, Contract } from "ethers";
+import * as EthDater from 'ethereum-block-by-date'
 import { Formik } from 'formik';
-import * as csv from 'csvtojson'
 import Confetti from 'react-confetti'
+import * as SuperfluidSDK from "@superfluid-finance/js-sdk"
 
+
+import SiteWrapper from "../../SiteWrapper.react";
+import Page from '../../components/tablerReactAlt/src/components/Page'
 import {
-  Page,
   Grid,
   Card,
   Text,
-  // Header,
-  // List,
   Dimmer,
-  // Table,
   Button,
-  // Icon,
-  Progress,
   Form
 } from "tabler-react";
+import SelectToken from "../../components/SelectToken";
 import NumberFormat from 'react-number-format';
-import DateRangePicker from '@wojtekmaj/react-daterange-picker';
-import DatePicker from 'react-date-picker'
-
-import SiteWrapper from "../../SiteWrapper.react";
+import DatePicker from 'react-datepicker'
+import "react-datepicker/dist/react-datepicker.css";
 
 import {
   useGasPrice,
   useContractLoader,
 } from "../../hooks";
-import { Transactor, sleep } from "../../utils";
+import {
+  Transactor,
+  getTokenIconUriFromAddress,
+  getTokenDataFromAddress,
+  getAddress,
+  isAddress } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
 
 
-function StreamPaymentPage() {
+function StreamingPaymentPage() {
   const web3Context = useContext(Web3Context)
   const walletContext = useContext(WalletContext)
   const gasPrice = useGasPrice("fast")
@@ -47,121 +49,203 @@ function StreamPaymentPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(1);
     // 1 - start | 2 - notValid |  3 - isValid
-    // 4 - approveTx | 5 - isApproved | 6 - submitTx
+    // 4 - deployTx | 5 - isDeployed | 6 - sendTx
     // 7 - complete
-  const [token, setToken] = useState('usdc');
-  const [addressArray, setAddressArray] = useState([]);
-  const [amountArray, setAmountArray] = useState([]);
-  const [totalAmount, setTotalAmount] = useState(0);
 
-  // useEffect(() => {
-  //   async function fetchTokenInfo() {
-  //     // Update token balances & allowance
-  //     if(web3Context.ready && !_.isUndefined(contracts)) {
-  //       try {
-  //         let tokenBalanceBN = await contracts[token]["balanceOf"](...[web3Context.address]);
-  //         let _tokenBalance = tokenBalanceBN.div(10**paymagicData.contracts[token]['decimals'])
+  const [parsedData, setParsedData] = useState({
+    token: {
+      symbol: '',
+      decimals: 0,
+      address: '',
+      contract: ''
+    },
+    currentUser: {},
 
-  //         let tokenAllowanceBN = await contracts[token]["allowance"](...[web3Context.address, paymagicData.contracts.disperse.address]);
-  //         let _tokenAllowance = tokenAllowanceBN.div(10**paymagicData.contracts[token]['decimals'])
+    tokenAmountBN: ethers.BigNumber.from(0),
+    recipient: '',
 
-  //         setTokenBalance(_tokenBalance)
-  //         setTokenAllowance(_tokenAllowance)
-  //       }
-  //       catch(err) {
-  //         console.error(err)
-  //       }
+    currentDate: new Date (),
+    endDate: new Date (),
 
-  //     }
-  //   }
-  //   fetchTokenInfo();
-  // }, [token, loading]);
+    confirmationDetails: ''
+  })
 
+  const [sf, setSF] = useState({});
+
+  useEffect(() => {
+    async function run() {
+      const _sf = new SuperfluidSDK.Framework({
+          ethers: web3Context.provider
+      });
+      await _sf.initialize()
+
+      setSF(_sf)
+    }
+    if(web3Context.ready) {
+      run()
+    }
+  }, [web3Context]);
+
+
+
+
+  async function parseFormData(values, errors) {
+    // console.log('---Parse Form Data---')
+    // console.log(`values ${JSON.stringify(values)}`)
+    // console.log(`errors ${JSON.stringify(errors)}`)
+    // console.log(`old parsed data ${JSON.stringify(parsedData)}`)
+
+    let _parsedData = parsedData
+    if(web3Context.ready) {
+      // TOKEN ADDRESS
+      let _valueTokenData = false
+      let _token = parsedData.token
+      if(_.isUndefined(errors.customTokenAddress) && isAddress(values.customTokenAddress)) {
+        try {
+          _token.contract = new Contract(
+            getAddress(values.customTokenAddress),
+            paymagicData.contracts['ERC20']['abi'],
+            web3Context.provider.getSigner()
+          );
+          _token.address = values.customTokenAddress
+          _token.symbol = await _token.contract.symbol()
+          _token.decimals = await _token.contract.decimals()
+          _valueTokenData = true
+
+          // _parsedData.currentUser = sf.user({
+          //   address: walletContext.address,
+          //   token: 
+          // });
+
+        }
+        catch(err) {
+          console.error(err)
+          setStatus(2)
+        }
+      }
+
+
+
+
+      //flow
+
+      // TOKEN AMOUNT
+      try {
+        _parsedData.tokenAmountBN = ethers.BigNumber.from(values.tokenAmount)
+      } catch(err) {
+        console.error(err)
+        _parsedData.tokenAmountBN = ethers.BigNumber.from(0)
+      }
+
+      // RECIPIENT
+      _parsedData.recipient = getAddress(values.recipient)
+
+      // DATES
+      // Convert to block numbers
+      const dater = new EthDater(
+        web3Context.provider
+      )
+      _parsedData.endDate = await dater.getDate(values.endDate)
+
+
+      _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
+
+      // console.log(`new parsed data ${JSON.stsringify(_parsedData)}`)
+      await setParsedData(_parsedData)
+
+      // Set validity status
+      if(_valueTokenData) {
+        setStatus(3) 
+      } else {
+        setStatus(2) 
+      }
+    }
+  }
+
+  function formatConfirmationDetails(_parsedData) {
+    // XXX USDC per month
+    // XXX USDC per year
+
+
+
+    // let tempDetails = _addressArray.map((a, i) => {
+    //   let tempBN = _amountArray[i] ? _amountArray[i] : ethers.BigNumber.from(0)
+    //   let tempNumber = ethers.utils.formatUnits(
+    //     tempBN, parsedData.token.decimals
+    //   )
+    //   return `${_addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${_tokenSymbol}`
+    // })
+
+    // return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${_tokenSymbol}\n`
+  }
 
   const validateRules = async values => {
     const errors = {};
 
-    // RECIPIENT
-    // let validAddress = false
-    // if(!!values.recipient) {
-    //   try {
-    //     validAddress = ethers.utils.isAddress(
-    //       ethers.utils.getAddress(values.recipient)
-    //     )
-    //   } catch {
-    //     validAddress = false
-    //   }
-    // }
-    // if (!values.recipient) {
-    //   errors.recipient = 'Required';
-    // } else if (!validAddress) {
-    //   errors.recipient = 'Invalid Address. Please try again.';
-    // }
-
-    // TOKEN
-    if (!values.token) {
-      errors.token = 'Required'
+    // CUSTOM TOKEN ADDRESS
+    if (!values.customTokenAddress) {
+      errors.customTokenAddress = 'Required'
+    } else if ( !isAddress(values.customTokenAddress) ){
+      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
     }
 
-    // AMOUNT
 
+    // TOKEN AMOUNT
+    if (!values.tokenAmount) {
+      errors.tokenAmount = 'Required'
+    } else if (values.tokenAmount <= 0 || !_.isNumber(values.tokenAmount)) {
+      errors.tokenAmount = 'Unable to parse amount. Please try again.';
+    }
 
-    // END DATE
+    if (parsedData.token.contract) {
+      // VALIDATE TOKEN BALANCE
+      let tokenBalanceBN = await parsedData.token.contract["balanceOf"](...[web3Context.address]);
+      if (tokenBalanceBN.lt(
+          ethers.utils.parseUnits(
+            _.toString(values.tokenAmount),
+            parsedData.token.decimals
+          )
+        )
+      ) {
+        errors.tokenAmount = 'Your token balance is too low';
+      }  
+    }
 
+    // RECIPIENT
+    if (!values.recipient) {
+      errors.recipient = 'Required'
+    } else if ( !isAddress(values.recipient) ){
+      errors.recipient = 'Unable to parse the address. Please try again.'
+    }
+
+    // DATES
+    if (!values.endDate) {
+      errors.endDate = 'Required'
+    } else if (values.endDate <= parsedData.currentDate) {
+      errors.cliffDate = 'End date must be after today.'
+    } 
 
     return errors;
   };
 
-  function formatDetails(amount, endDate) {
-    const diffDays = Math.ceil(Math.abs(new Date() - endDate) / (1000 * 60 * 60 * 24));
-    console.log(endDate)
-    console.log(diffDays)
-    let amountPerDay = amount ? amount/diffDays : 0
-    const symbol = paymagicData.contracts[token]['symbol']
-
-    return `${numeral(amountPerDay).format('0,0.0000')} ${symbol} per day\n` +
-      `${numeral(amountPerDay*7).format('0,0.0000')} ${symbol} per week\n` +
-      `${numeral(amountPerDay*30).format('0,0.0000')} ${symbol} per month\n` +
-      `${numeral(amountPerDay*365).format('0,0.0000')} ${symbol} per year\n`
-  }
-
-  async function handleApproval(cb) {
+  async function handleDeposit(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts[token]["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(totalAmount), paymagicData.contracts[token]['decimals'])), cb);
+      tx(parsedData.token.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), parsedData.token.decimals)), cb);
     }
   }
   
-  async function handleSubmit(cb) {
+  async function handleFlow(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](contracts[token]['address'], addressArray, amountArray), cb);
+      tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray), cb);
     }
   }
 
-  const title = `🚰 Stream Tokens`
-
-  if(!web3Context.ready)
-    return (
-      <SiteWrapper>
-        <Page.Content title={title} headerClassName="d-flex justify-content-center">
-          <Card><Card.Body><Text className="text-center font-italic">Connect Wallet Above<span role="img">👆</span></Text></Card.Body></Card>
-        </Page.Content>
-      </SiteWrapper>
-    )
-
-  if(walletContext.loading)
-    return (
-      <SiteWrapper>
-        <Page.Content title={title} headerClassName="d-flex justify-content-center">
-          <Dimmer active loader className="mt-8"/>
-        </Page.Content>
-      </SiteWrapper>
-    )
 
   return (
     <SiteWrapper>
-      <Page.Content title={title} headerClassName="d-flex justify-content-center">
+      <Page.Content title={`Stream Payment`} headerClassName="d-flex justify-content-center" web3ContextReady={web3Context.ready} walletContextLoading={walletContext.loading}>
         { status === 7 ? <Confetti/> : <span/> }
         <Grid.Row className="d-flex justify-content-center">
           <Grid.Col lg={8}>
@@ -169,58 +253,85 @@ function StreamPaymentPage() {
               <span>{`<< Back`}</span>
             </Link>
             <Card className="mb-1 mt-1"
-              title="Create a token flow"
+              title="Create new Streaming Payment"
             >
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    token: token,
-                    amount: null,
-                    recipient: null,
-                    endDate: new Date().setFullYear(new Date().getFullYear() + 1)
+                    customTokenAddress: '0x2eb320e2100a043401e3b3b132d4134f235a6a04',
+                    tokenAmount: 10,
+                    recipient: '',
+                    endDate: new Date(
+                      parsedData.currentDate.getFullYear()+1,
+                      parsedData.currentDate.getMonth(),
+                      parsedData.currentDate.getDate()
+                    )
                   }}
                   validate={ validateRules }
                   onSubmit={async (values, actions) => {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
-                      if(status === 6 || status === 5) {
+                      if(txStatus.code && txStatus.code === 4001) {
+                        setStatus(3);
+                      } else if(status === 6 || status === 5) {
                         setStatus(7);
                       } else if(status === 4 || status === 3) {
                         setStatus(5);
-                      } else {
-                        setStatus(3);
                       }
                       setLoading(false);
                     }
 
                     if(status === 3) {
-                      // ApprovalTx
+                      // ApproveTx
                       setStatus(4);
-                      handleApproval(afterMine)
-                    } else {
-                      // SubmitTx
+                      // handleApproval(afterMine)
+                    } else if(status === 5) {
+                      // UpgradeTx
                       setStatus(6);
-                      handleSubmit(afterMine)
+                      // handleSend(afterMine)
+                    } else {
+                      // FlowTx
+                      setStatus(6);
+                      // handleSend(afterMine)
                     }
                   }}
                 >
                   { props => {
-                    async function handleTokenChange(event) {
-                      const _token = event.currentTarget.value
-                      if(_token) {
-                        setToken(_token)
-                      }
 
-                      props.setFieldValue('token', _token)
-                    }
+                    useEffect(() => {
+                      async function run() {
+                        await parseFormData(props.values, props.errors)
+                      }
+                      run()
+                    }, [props.values]);
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
                         <Form.Group className='m-3'>
-                          <Progress size="sm">
-                            <Progress.Bar color='primary' width={30} />
-                          </Progress>
+                          <Form.Input
+                            label='TOKEN ADDRESS'
+                            name='customTokenAddress'
+                            value={props.values.customTokenAddress}
+                            error={props.errors.customTokenAddress }
+                            className='mb-3'
+                            disabled={status >= 4}
+                            placeholder={`0xa0b8...eb48`}
+                            onChange={props.handleChange}
+                          />
+                        </Form.Group>
+                        <Form.Group label='AMOUNT' className='m-3'>
+                          <NumberFormat
+                            placeholder="0.00"
+                            allowNegative={false}
+                            isNumericString={true}
+                            thousandSeparator={true}
+                            value={props.values.tokenAmount}
+                            disabled={status >= 4}
+                            className={"form-control"}
+                            onValueChange={val => props.setFieldValue('tokenAmount',val.value)}
+                          />
+                          {props.errors.tokenAmount && <span className="invalid-feedback">{props.errors.tokenAmount}</span>}
                         </Form.Group>
                         <Form.Group className='m-3'>
                           <Form.Input
@@ -228,64 +339,55 @@ function StreamPaymentPage() {
                             name='recipient'
                             value={props.values.recipient}
                             error={props.errors.recipient }
-                            placeholder={`0xABCDFA1DC112917c781942Cc01c68521c415e`}
+                            disabled={status >= 4}
+                            className='mb-3'
+                            placeholder={`0xe2B5...ab24`}
                             onChange={props.handleChange}
                           />
-                        </Form.Group>
-                        <Form.Group className='m-3'>
-                          <Form.Select
-                            name="token"
-                            label="TOKEN"
-                            value={props.values.token}
-                            error={props.errors.token}
-                            onChange={props.handleChange}
-                          >
-                            <option value='usdc'>
-                              USDC
-                            </option>
-                          </Form.Select>
-                        </Form.Group>
-                        <Form.Group label='AMOUNT' className='m-3'>
-                          <NumberFormat
-                            placeholder="0.00"
-                            isNumericString={true}
-                            thousandSeparator={true}
-                            value={props.values.amount}
-                            className={"form-control"}
-                            onValueChange={val => props.setFieldValue('amount', val.floatValue)}
-                          />
-                          {props.errors.amount && <span className="invalid-feedback">{props.errors.amount}</span>}
                         </Form.Group>
                         <Form.Group label='END DATE' className='m-3'>
-                          <DatePicker
-                            value={props.values.endDate}
+                          <DatePicker 
                             selected={props.values.endDate}
-                            onChange={val => props.setFieldValue('endDate', val)}
+                            dateFormat="MMMM d, yyyy"
+                            className="form-control"
+                            disabled={status >= 4}
+                            name="endDate"
+                            onChange={val => props.setFieldValue('endDate',val)}
                           />
                           {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
                         </Form.Group>
-                        { 
-                          true && (
-                            <div>
-                              <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
-                                <Form.StaticText className="whitespace-preline">
-                                  { formatDetails(props.values.amount, props.values.endDate) }
-                                </Form.StaticText>
-                              </Form.Group>
-                            </div>
-                          )
-                        }
-                        <Form.Group className='m-3 mt-5'>
-                          <Button
-                            color="primary"
-                            type="submit"
-                            value="Submit"
-                            className="color "
-                            icon={'toggle-left'}
-                            disabled={false}
-                          >
-                            Start
-                          </Button>
+                        <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
+                          <Form.StaticText className="whitespace-preline">
+                            { parsedData.confirmationDetails }
+                          </Form.StaticText>
+                        </Form.Group>
+                        <Form.Group className='m-3'>
+                          { 
+                            (status >= 5) ? (
+                              <Button
+                                color="primary"
+                                type="submit"
+                                value="Submit"
+                                className="color "
+                                icon={'send'}
+                                disabled={status >= 7}
+                                loading={loading}
+                              >
+                                Prepare Stream
+                              </Button> ) : (
+                              <Button
+                                color="primary"
+                                type="submit"
+                                value="Submit"
+                                className="color "
+                                icon={'toggle-left'}
+                                disabled={status < 3 || !_.isEmpty(props.errors)}
+                                loading={loading}
+                              >
+                                Initiate Stream
+                              </Button>
+                            )
+                          }
                         </Form.Group>
                       </Form>
                     )
@@ -301,4 +403,4 @@ function StreamPaymentPage() {
   )
 }
 
-export default StreamPaymentPage;
+export default StreamingPaymentPage;

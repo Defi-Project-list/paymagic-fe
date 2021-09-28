@@ -120,7 +120,7 @@ function VestingPaymentPage() {
       _parsedData.endDate = await dater.getDate(values.endDate)
 
 
-      // confirmationDetails
+      _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
       console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
       await setParsedData(_parsedData)
@@ -134,17 +134,22 @@ function VestingPaymentPage() {
     }
   }
 
-  // function formatConfirmationDetails(_addressArray, _amountArray, _totalAmount, _tokenSymbol) {
-  //   let tempDetails = _addressArray.map((a, i) => {
-  //     let tempBN = _amountArray[i] ? _amountArray[i] : ethers.BigNumber.from(0)
-  //     let tempNumber = ethers.utils.formatUnits(
-  //       tempBN, parsedData.token.decimals
-  //     )
-  //     return `${_addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${_tokenSymbol}`
-  //   })
+  function formatConfirmationDetails(_parsedData) {
+    // XXX USDC per month
+    // XXX USDC per year
 
-  //   return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${_tokenSymbol}\n`
-  // }
+
+
+    // let tempDetails = _addressArray.map((a, i) => {
+    //   let tempBN = _amountArray[i] ? _amountArray[i] : ethers.BigNumber.from(0)
+    //   let tempNumber = ethers.utils.formatUnits(
+    //     tempBN, parsedData.token.decimals
+    //   )
+    //   return `${_addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${_tokenSymbol}`
+    // })
+
+    // return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${_tokenSymbol}\n`
+  }
 
   const validateRules = async values => {
     const errors = {};
