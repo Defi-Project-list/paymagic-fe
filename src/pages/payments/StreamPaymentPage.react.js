@@ -8,7 +8,7 @@ import { ethers, Contract } from "ethers";
 import * as EthDater from 'ethereum-block-by-date'
 import { Formik } from 'formik';
 import Confetti from 'react-confetti'
-import * as SuperfluidSDK from "@superfluid-finance/js-sdk"
+// import * as SuperfluidSDK from "@superfluid-finance/js-sdk"
 
 
 import SiteWrapper from "../../SiteWrapper.react";
@@ -72,19 +72,19 @@ function StreamingPaymentPage() {
 
   const [sf, setSF] = useState({});
 
-  useEffect(() => {
-    async function run() {
-      const _sf = new SuperfluidSDK.Framework({
-          ethers: web3Context.provider
-      });
-      await _sf.initialize()
+  // useEffect(() => {
+  //   async function run() {
+  //     const _sf = new SuperfluidSDK.Framework({
+  //         ethers: web3Context.provider
+  //     });
+  //     await _sf.initialize()
 
-      setSF(_sf)
-    }
-    if(web3Context.ready) {
-      run()
-    }
-  }, [web3Context]);
+  //     setSF(_sf)
+  //   }
+  //   if(web3Context.ready) {
+  //     run()
+  //   }
+  // }, [web3Context]);
 
   async function parseFormData(values, errors) {
     // console.log('---Parse Form Data---')
@@ -161,10 +161,12 @@ function StreamingPaymentPage() {
 
   function formatConfirmationDetails(_parsedData) {
     let _details = `Sending ${numeral(_parsedData.tokenAmountBN.toNumber()).format('0,0.0000')} ${_parsedData.token ? _parsedData.token.symbol : ''}\n`
-    _details = _details + `-----\n`
+    _details = 
 
-    _details = _details + `-----\n`
-    
+    _details = _details + `-----\n` +
+      `Sending ${numeral(_parsedData.tokenAmountBN.toNumber()).format('0,0.0000')} ${_parsedData.token ? _parsedData.token.symbol : ''} per month\n` +
+      `Sending ${numeral(_parsedData.tokenAmountBN.toNumber()).format('0,0.0000')} ${_parsedData.token ? _parsedData.token.symbol : ''} per week\n`
+
     // XXX USDC per month
     // XXX USDC per year
 
