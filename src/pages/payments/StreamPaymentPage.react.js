@@ -160,6 +160,11 @@ function StreamingPaymentPage() {
   }
 
   function formatConfirmationDetails(_parsedData) {
+    let _details = `Sending ${numeral(_parsedData.tokenAmountBN.toNumber()).format('0,0.0000')} ${_parsedData.token ? _parsedData.token.symbol : ''}\n`
+    _details = _details + `-----\n`
+
+    _details = _details + `-----\n`
+    
     // XXX USDC per month
     // XXX USDC per year
 
@@ -174,6 +179,7 @@ function StreamingPaymentPage() {
     // })
 
     // return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${_tokenSymbol}\n`
+    return _details
   }
 
   const validateRules = async values => {
@@ -238,7 +244,6 @@ function StreamingPaymentPage() {
       tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray), cb);
     }
   }
-
 
   return (
     <SiteWrapper>
