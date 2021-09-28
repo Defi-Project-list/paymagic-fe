@@ -49,8 +49,8 @@ function StreamingPaymentPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(1);
     // 1 - start | 2 - notValid |  3 - isValid
-    // 4 - deployTx | 5 - isDeployed | 6 - sendTx
-    // 7 - complete
+    // 4 - approvalTx | 5 - isApproved | 6 - upgradeTx
+    // 7 - isUpgraded | 8 - floxTx | 9 - complete
 
   const [parsedData, setParsedData] = useState({
     token: {
@@ -85,9 +85,6 @@ function StreamingPaymentPage() {
       run()
     }
   }, [web3Context]);
-
-
-
 
   async function parseFormData(values, errors) {
     // console.log('---Parse Form Data---')

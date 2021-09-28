@@ -24,9 +24,10 @@ function About() {
               statusColor="blue"
               body={(
                 <p style={{whiteSpace: "pre-line"}}>
-Paymagic allows DAOs, crypto teams, and individuals to access different types of popular payments on Ethereum chains like mainnet, Polygon, Arbitrum, and Optimism. We seek to push the boundaries of crypto payments and support the further growth of DeFi, NFTs, and DAOs.{"\n\n"}
-The app is inspired by the ideas and creations of projects like Disperse.app, SuperFluid, Sabler, and many more.{"\n\n"}
-Feel free to contact us on Twitter if you find the service useful or have feature requests. We'll plan to ship updates and new features as soon as we can.{"\n\n"}
+Paymagic allows DAOs, crypto teams, and individuals to send different payment types that are needed to run their organization. Whether you're rewarding your community, paying contributors, vesting tokens to investors, or anything else, Paymagic has you covered! ✨{"\n\n"}
+The app is currently deployed to Polygon and mainnet but will launch on other networks over time. We seek to push the boundaries of what smart contract payments can do and support the further growth of DeFi, NFTs, DAOs, and crypto overall.{"\n\n"}
+Paymagic was inspired by the ideas and creations of projects like Disperse.app, SuperFluid, Sabler, MerkleDrops, and many many more. 🙏{"\n\n"}
+Feel free to contact us on Twitter if you find the service useful or have feature requests. We'll plan to ship updates, new features, and new networks in the coming months.{"\n\n"}
 Cheers,{"\n"}
 ✨ 💸 ✨ Paymagic Team ✨ 💸 ✨
                 </p>
