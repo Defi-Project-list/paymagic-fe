@@ -1,7 +1,10 @@
 {
   "name": "paymagic-fe",
   "version": "0.0.1",
-  "private": true,
+  "engines": {
+    "node": "14.7.0"
+  },
+  "private": false,
   "license": "MIT",
   "dependencies": {
     "@ethersproject/contracts": "^5.0.9",
