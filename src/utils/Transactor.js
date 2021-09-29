@@ -52,7 +52,7 @@ export default function Transactor(provider, cb, gasPrice, etherscan) {
           result = await signer.sendTransaction(tx);
         }
         console.log("RESULT:", result);
-        // console.log("Notify", notify);
+        console.log("Notify", notify);
 
         // if it is a valid Notify.js network, use that, if not, just send a default notification
         if ([1, 3, 4, 5, 42, 100].indexOf(network.chainId) >= 0) {
@@ -63,18 +63,21 @@ export default function Transactor(provider, cb, gasPrice, etherscan) {
             };
           });
           emitter.on('txConfirmed', transaction => {
+            console.log('txConfirmed');
             cb('txConfirmed');
             return {
               onclick: () => window.open((etherscan || etherscanTxUrl) + transaction.hash),
             };
           });
           emitter.on('txCancel', transaction => {
+            console.log('txCancel');
             cb('txCancel');
             return {
               onclick: () => window.open((etherscan || etherscanTxUrl) + transaction.hash),
             };
           });
           emitter.on('txFailed', transaction => {
+            console.log('txFailed');
             cb('txFailed');
             return {
               onclick: () => window.open((etherscan || etherscanTxUrl) + transaction.hash),

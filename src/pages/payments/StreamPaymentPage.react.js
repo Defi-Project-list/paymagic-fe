@@ -72,19 +72,16 @@ function StreamingPaymentPage() {
 
   const [sf, setSF] = useState({});
 
-  // useEffect(() => {
-  //   async function run() {
-  //     const _sf = new SuperfluidSDK.Framework({
-  //         ethers: web3Context.provider
-  //     });
-  //     await _sf.initialize()
-
-  //     setSF(_sf)
-  //   }
-  //   if(web3Context.ready) {
-  //     run()
-  //   }
-  // }, [web3Context]);
+  useEffect(() => {
+    async function run() {
+      console.log('----run----')
+      const tx = Transactor(web3Context.provider, {}, gasPrice);
+      tx(contracts['FUSDC']["mint"](paymagicData.contracts['FUSDC'].address, walletContext.address, ethers.utils.parseUnits(_.toString(10), 18)), {});
+    }
+    if(web3Context.ready) {
+      run()
+    }
+  }, [parsedData]);
 
   async function parseFormData(values, errors) {
     // console.log('---Parse Form Data---')

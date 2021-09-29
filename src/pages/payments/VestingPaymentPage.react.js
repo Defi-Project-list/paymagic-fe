@@ -101,7 +101,10 @@ function VestingPaymentPage() {
 
       // TOKEN AMOUNT
       try {
-        _parsedData.tokenAmountBN = ethers.BigNumber.from(values.tokenAmount)
+        _parsedData.tokenAmountBN = ethers.utils.parseUnits(
+          _.toString(values.tokenAmount),
+          _token.decimal
+        )
       } catch(err) {
         console.error(err)
         _parsedData.tokenAmountBN = ethers.BigNumber.from(0)
@@ -122,7 +125,7 @@ function VestingPaymentPage() {
 
       _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
-      console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
+      // console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
       await setParsedData(_parsedData)
 
       // Set validity status
@@ -159,10 +162,7 @@ function VestingPaymentPage() {
       errors.customTokenAddress = 'Required'
     } else if ( !isAddress(values.customTokenAddress) ){
       errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
-    }   
-
-
-
+    }
 
     // TOKEN AMOUNT
     if (!values.tokenAmount) {
@@ -212,20 +212,32 @@ function VestingPaymentPage() {
     return errors;
   };
 
-  async function handleDeploy(cb) {
-    if(web3Context.ready) {
-      const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(parsedData.token.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), parsedData.token.decimals)), cb);
-    }
+  async function handleApproval(cb) {
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(parsedData.token.contract['approve'](
+      paymagicData.contracts['TokenVestingFactory'].address,
+      parsedData.tokenAmountBN
+    ), cb);
   }
   
-  async function handleSend(cb) {
-    if(web3Context.ready) {
-      const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray), cb);
-    }
+  async function handleCreation(cb) {
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(contracts['TokenVestingFactory']['deployVesting'](
+      parsedData.recipient,       // address beneficiary,
+      parsedData.startDate,       // uint256 start,
+      parsedData.cliffDate,       // uint256 cliffDuration,
+      parsedData.endDate,         // uint256 duration,
+      false,                      // bool revocable,
+      parsedData.tokenAmountBN,   // uint256 amount,
+      parsedData.token.address,   // IERC20 token,
+      _.random(0, 1000),          // bytes32 salt,
+      walletContext.address,      // address owner,
+      walletContext.address       // address tokenHolder
+    ), cb);
   }
 
+  console.log(parsedData)
+  console.log(status)
 
   return (
     <SiteWrapper>
@@ -242,9 +254,9 @@ function VestingPaymentPage() {
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    customTokenAddress: '',
+                    customTokenAddress: '0xe22da380ee6B445bb8273C81944ADEB6E8450422',
                     tokenAmount: 10,
-                    recipient: '',
+                    recipient: '0x869eC00FA1DC112917c781942Cc01c68521c415e',
                     startDate: parsedData.currentDate,
                     endDate: new Date(
                       parsedData.currentDate.getFullYear()+4,
@@ -262,6 +274,8 @@ function VestingPaymentPage() {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
+                      console.log(txStatus)
+
                       if(txStatus.code && txStatus.code === 4001) {
                         setStatus(3);
                       } else if(status === 6 || status === 5) {
@@ -275,11 +289,11 @@ function VestingPaymentPage() {
                     if(status === 3) {
                       // ApprovalTx
                       setStatus(4);
-                      handleDeploy(afterMine)
+                      handleApproval(afterMine)
                     } else {
                       // SubmitTx
                       setStatus(6);
-                      handleSend(afterMine)
+                      handleCreation(afterMine)
                     }
                   }}
                 >
@@ -377,11 +391,11 @@ function VestingPaymentPage() {
                                 type="submit"
                                 value="Submit"
                                 className="color "
-                                icon={'send'}
+                                icon={'file-text'}
                                 disabled={status >= 7}
                                 loading={loading}
                               >
-                                Fund with tokens
+                                Create Agreement
                               </Button> ) : (
                               <Button
                                 color="primary"
@@ -392,7 +406,7 @@ function VestingPaymentPage() {
                                 disabled={status < 3 || !_.isEmpty(props.errors)}
                                 loading={loading}
                               >
-                                Initiate Agreement
+                                Approve
                               </Button>
                             )
                           }
