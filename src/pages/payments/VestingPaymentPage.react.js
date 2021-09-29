@@ -63,9 +63,11 @@ function VestingPaymentPage() {
     recipient: '',
 
     currentDate: new Date (),
-    startDate: {},
-    cliffDate: {},
-    endDate: {},
+    startDate: 0,
+    cliffDate: 0,
+    endDate: 0,
+
+    salt: '',
 
     confirmationDetails: ''
   })
@@ -114,14 +116,13 @@ function VestingPaymentPage() {
       _parsedData.recipient = getAddress(values.recipient)
 
       // DATES
-      // Convert to block numbers
-      const dater = new EthDater(
-        web3Context.provider
-      )
-      _parsedData.startDate = await dater.getDate(values.startDate)
-      _parsedData.cliffDate = await dater.getDate(values.cliffDate)
-      _parsedData.endDate = await dater.getDate(values.endDate)
+      // Convert to Unix time in seconds
+      _parsedData.startDate = ethers.BigNumber.from(_.round(values.startDate.getTime() / 1000))
+      _parsedData.cliffDate = ethers.BigNumber.from(_.round((values.cliffDate.getTime() - values.startDate.getTime()) / 1000))
+      _parsedData.endDate = ethers.BigNumber.from(_.round((values.endDate.getTime() - values.startDate.getTime()) / 1000))
 
+      // SALT
+      _parsedData.salt = ethers.utils.formatBytes32String(_.toString(_.random(0, 1000)))
 
       _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
@@ -217,23 +218,29 @@ function VestingPaymentPage() {
     tx(parsedData.token.contract['approve'](
       paymagicData.contracts['TokenVestingFactory'].address,
       parsedData.tokenAmountBN
-    ), cb);
+    ));
   }
   
   async function handleCreation(cb) {
-    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    console.log(`~~Sending tx~~`)
+    console.log(parsedData)
+    console.log(parsedData.startDate.toString())
+    console.log(parsedData.cliffDate.toString())
+    console.log(parsedData.endDate.toString())
+
+    const tx = Transactor(web3Context.provider, cb, gasPrice)
     tx(contracts['TokenVestingFactory']['deployVesting'](
-      parsedData.recipient,       // address beneficiary,
-      parsedData.startDate,       // uint256 start,
-      parsedData.cliffDate,       // uint256 cliffDuration,
-      parsedData.endDate,         // uint256 duration,
-      false,                      // bool revocable,
-      parsedData.tokenAmountBN,   // uint256 amount,
-      parsedData.token.address,   // IERC20 token,
-      _.random(0, 1000),          // bytes32 salt,
-      walletContext.address,      // address owner,
-      walletContext.address       // address tokenHolder
-    ), cb);
+      parsedData.recipient,             // address beneficiary,
+      parsedData.startDate,             // uint256 start,
+      parsedData.cliffDate,             // uint256 cliffDuration,
+      parsedData.endDate,               // uint256 duration,
+      false,                            // bool revocable,
+      parsedData.tokenAmountBN,         // uint256 amount,
+      parsedData.token.address,         // IERC20 token,
+      parsedData.salt,                  // bytes32 salt,
+      web3Context.address,              // address owner,
+      web3Context.address               // address tokenHolder
+    ));
   }
 
   console.log(parsedData)
@@ -278,6 +285,11 @@ function VestingPaymentPage() {
 
                       if(txStatus.code && txStatus.code === 4001) {
                         setStatus(3);
+                      } else if(txStatus.code && txStatus.code === 'INVALID_ARGUMENT') {
+                        setStatus(2);
+                      } else if(txStatus.code) {
+                        console.error(txStatus)
+                        setStatus(2);
                       } else if(status === 6 || status === 5) {
                         setStatus(7);
                       } else if(status === 4 || status === 3) {

@@ -229,14 +229,14 @@ function DispersePaymentPage() {
   async function handleApproval(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(tokenData.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), tokenData.decimals)), cb);
+      tx(tokenData.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), tokenData.decimals)));
     }
   }
   
   async function handleSubmit(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](tokenData.address, parsedData.addressArray, parsedData.amountArray), cb);
+      tx(contracts['disperse']["disperseTokenSimple"](tokenData.address, parsedData.addressArray, parsedData.amountArray));
     }
   }
 
