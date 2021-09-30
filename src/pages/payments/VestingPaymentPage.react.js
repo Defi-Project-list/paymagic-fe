@@ -81,7 +81,7 @@ function VestingPaymentPage() {
     let _parsedData = parsedData
     if(web3Context.ready) {
       // TOKEN ADDRESS
-      let _valueTokenData = false
+      let _validTokenData = false
       let _token = parsedData.token
       if(_.isUndefined(errors.customTokenAddress) && isAddress(values.customTokenAddress)) {
         try {
@@ -93,7 +93,7 @@ function VestingPaymentPage() {
           _token.address = values.customTokenAddress
           _token.symbol = await _token.contract.symbol()
           _token.decimals = await _token.contract.decimals()
-          _valueTokenData = true
+          _validTokenData = true
         }
         catch(err) {
           console.error(err)
@@ -130,7 +130,7 @@ function VestingPaymentPage() {
       await setParsedData(_parsedData)
 
       // Set validity status
-      if(_valueTokenData) {
+      if(_validTokenData) {
         setStatus(3) 
       } else {
         setStatus(2) 
