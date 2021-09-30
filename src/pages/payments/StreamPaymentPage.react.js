@@ -47,10 +47,12 @@ function StreamingPaymentPage() {
   const contracts = useContractLoader(web3Context.provider);
 
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState({title: '', color: 'primary'})
   const [status, setStatus] = useState(1);
+    // 0 - error
     // 1 - start | 2 - notValid |  3 - isValid
     // 4 - approvalTx | 5 - isApproved | 6 - upgradeTx
-    // 7 - isUpgraded | 8 - floxTx | 9 - complete
+    // 7 - isUpgraded | 8 - flowTx | 9 - complete
 
   const [parsedData, setParsedData] = useState({
     token: {
@@ -59,7 +61,6 @@ function StreamingPaymentPage() {
       address: '',
       contract: ''
     },
-    currentUser: {},
 
     tokenAmountBN: ethers.BigNumber.from(0),
     recipient: '',
@@ -67,24 +68,28 @@ function StreamingPaymentPage() {
     currentDate: new Date (),
     endDate: new Date (),
 
+    ctx: ethers.utils.formatBytes32String("0x"),
+
     confirmationDetails: ''
   })
 
-  const [sf, setSF] = useState({});
-
-  // useEffect(() => {
-  //   async function run() {
-  //     const _sf = new SuperfluidSDK.Framework({
-  //         ethers: web3Context.provider
-  //     });
-  //     await _sf.initialize()
-
-  //     setSF(_sf)
-  //   }
-  //   if(web3Context.ready) {
-  //     run()
-  //   }
-  // }, [web3Context]);
+  useEffect(() => {
+    switch(status) {
+      case 0:
+        setAlert({
+          title: 'An error has occurred. Please refresh the page and try again.',
+          color: 'danger'
+        })
+        break;
+      case 9:
+        setAlert({
+          title: 'Your transaction is complete! Thanks for using Paymagic!',
+          color: 'success'
+        })
+        break;
+      default:
+    }
+  }, [status]);
 
   async function parseFormData(values, errors) {
     // console.log('---Parse Form Data---')
@@ -95,7 +100,7 @@ function StreamingPaymentPage() {
     let _parsedData = parsedData
     if(web3Context.ready) {
       // TOKEN ADDRESS
-      let _valueTokenData = false
+      let _validTokenData = false
       let _token = parsedData.token
       if(_.isUndefined(errors.customTokenAddress) && isAddress(values.customTokenAddress)) {
         try {
@@ -107,13 +112,7 @@ function StreamingPaymentPage() {
           _token.address = values.customTokenAddress
           _token.symbol = await _token.contract.symbol()
           _token.decimals = await _token.contract.decimals()
-          _valueTokenData = true
-
-          // _parsedData.currentUser = sf.user({
-          //   address: walletContext.address,
-          //   token: 
-          // });
-
+          _validTokenData = true
         }
         catch(err) {
           console.error(err)
@@ -121,14 +120,12 @@ function StreamingPaymentPage() {
         }
       }
 
-
-
-
-      //flow
-
       // TOKEN AMOUNT
       try {
-        _parsedData.tokenAmountBN = ethers.BigNumber.from(values.tokenAmount)
+        _parsedData.tokenAmountBN = ethers.utils.parseUnits(
+          _.toString(values.tokenAmount),
+          _token.decimal
+        )
       } catch(err) {
         console.error(err)
         _parsedData.tokenAmountBN = ethers.BigNumber.from(0)
@@ -137,21 +134,21 @@ function StreamingPaymentPage() {
       // RECIPIENT
       _parsedData.recipient = getAddress(values.recipient)
 
-      // DATES
-      // Convert to block numbers
-      const dater = new EthDater(
-        web3Context.provider
-      )
-      _parsedData.endDate = await dater.getDate(values.endDate)
+      // ENDDATE / FLOWRATE
+      // Convert to tokens/second
+      // TotalAmount adjusted for decimals / (endDate - startDate)
+      let flowDuration = _.round((values.endDate.getTime() - parsedData.currentDate.getTime()) / 1000)
+      _parsedData.flowRate = _parsedData.tokenAmountBN.div(flowDuration)
 
 
-      _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
+      // _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
+
 
       // console.log(`new parsed data ${JSON.stsringify(_parsedData)}`)
-      await setParsedData(_parsedData)
+      setParsedData(_parsedData)
 
       // Set validity status
-      if(_valueTokenData) {
+      if(_validTokenData) {
         setStatus(3) 
       } else {
         setStatus(2) 
@@ -194,7 +191,6 @@ function StreamingPaymentPage() {
       errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
     }
 
-
     // TOKEN AMOUNT
     if (!values.tokenAmount) {
       errors.tokenAmount = 'Required'
@@ -223,7 +219,7 @@ function StreamingPaymentPage() {
       errors.recipient = 'Unable to parse the address. Please try again.'
     }
 
-    // DATES
+    // DATE
     if (!values.endDate) {
       errors.endDate = 'Required'
     } else if (values.endDate <= parsedData.currentDate) {
@@ -233,38 +229,54 @@ function StreamingPaymentPage() {
     return errors;
   };
 
-  async function handleDeposit(cb) {
-    if(web3Context.ready) {
-      const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(parsedData.token.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), parsedData.token.decimals)), cb);
-    }
+  async function handleApproval(cb) {
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(parsedData.token.contract['approve'](
+      paymagicData.contracts['FUSDCX'].address,
+      parsedData.tokenAmountBN
+    ));
+  }
+
+  async function handleUpgrade(cb) {
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(contracts['FUSDCX']["upgrade"](parsedData.tokenAmountBN));
   }
   
   async function handleFlow(cb) {
-    if(web3Context.ready) {
-      const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray), cb);
-    }
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(contracts['CFAV1']["createFlow"](
+      paymagicData.contracts['FUSDCX'],
+      parsedData.recipient,
+      parsedData.flowRate,
+      parsedData.ctx
+    ));
   }
+
+  console.log(`---Info---`)
+  console.log(`Status ${status}`)
+  console.log(parsedData)
 
   return (
     <SiteWrapper>
       <Page.Content title={`Stream Payment`} headerClassName="d-flex justify-content-center" web3ContextReady={web3Context.ready} walletContextLoading={walletContext.loading}>
-        { status === 7 ? <Confetti/> : <span/> }
+        { status === 9 ? <Confetti/> : <span/> }
         <Grid.Row className="d-flex justify-content-center">
           <Grid.Col lg={8}>
             <Link to="/payments">
               <span>{`<< Back`}</span>
             </Link>
-            <Card className="mb-1 mt-1"
+            <Card 
+              className="mb-1 mt-1"
               title="Create new Streaming Payment"
+              alert={alert.title}
+              alertColor={alert.color}
             >
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
                     customTokenAddress: '0x2eb320e2100a043401e3b3b132d4134f235a6a04',
                     tokenAmount: 10,
-                    recipient: '',
+                    recipient: '0x869eC00FA1DC112917c781942Cc01c68521c415e',
                     endDate: new Date(
                       parsedData.currentDate.getFullYear()+1,
                       parsedData.currentDate.getMonth(),
@@ -276,12 +288,20 @@ function StreamingPaymentPage() {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
+                      console.log(`Completed tx`)
+                      console.log(txStatus)
+                      console.log(status)
                       if(txStatus.code && txStatus.code === 4001) {
+                        console.error(txStatus)
                         setStatus(3);
-                      } else if(status === 6 || status === 5) {
-                        setStatus(7);
+                      } else if(txStatus.code) {
+                        setStatus(0);
                       } else if(status === 4 || status === 3) {
                         setStatus(5);
+                      } else if(status === 6 || status === 5) {
+                        setStatus(7);
+                      } else if(status === 8 || status === 7) {
+                        setStatus(9);
                       }
                       setLoading(false);
                     }
@@ -289,15 +309,15 @@ function StreamingPaymentPage() {
                     if(status === 3) {
                       // ApproveTx
                       setStatus(4);
-                      // handleApproval(afterMine)
+                      handleApproval(afterMine)
                     } else if(status === 5) {
                       // UpgradeTx
                       setStatus(6);
-                      // handleSend(afterMine)
-                    } else {
+                      handleUpgrade(afterMine)
+                    } else if(status === 7) {
                       // FlowTx
-                      setStatus(6);
-                      // handleSend(afterMine)
+                      setStatus(8);
+                      handleFlow(afterMine)
                     }
                   }}
                 >
@@ -367,30 +387,42 @@ function StreamingPaymentPage() {
                         </Form.Group>
                         <Form.Group className='m-3'>
                           { 
-                            (status >= 5) ? (
-                              <Button
-                                color="primary"
-                                type="submit"
-                                value="Submit"
-                                className="color "
-                                icon={'send'}
-                                disabled={status >= 7}
-                                loading={loading}
-                              >
-                                Prepare Stream
-                              </Button> ) : (
-                              <Button
-                                color="primary"
-                                type="submit"
-                                value="Submit"
-                                className="color "
-                                icon={'toggle-left'}
-                                disabled={status < 3 || !_.isEmpty(props.errors)}
-                                loading={loading}
-                              >
-                                Initiate Stream
-                              </Button>
-                            )
+                            (status <= 4) ? (
+                                <Button
+                                  color="primary"
+                                  type="submit"
+                                  value="Submit"
+                                  className="color "
+                                  icon={'toggle-left'}
+                                  disabled={status < 3 || !_.isEmpty(props.errors)}
+                                  loading={loading}
+                                >
+                                  Approve
+                                </Button> ) :
+                              (status <= 6) ? (
+                                <Button
+                                  color="primary"
+                                  type="submit"
+                                  value="Submit"
+                                  className="color "
+                                  icon={'upload'}
+                                  disabled={status !== 5}
+                                  loading={loading}
+                                >
+                                  Prepare Stream
+                                </Button> ) : (
+                                <Button
+                                  color="primary"
+                                  type="submit"
+                                  value="Submit"
+                                  className="color "
+                                  icon={'send'}
+                                  disabled={status !== 7}
+                                  loading={loading}
+                                >
+                                  Start Stream
+                                </Button>
+                              )
                           }
                         </Form.Group>
                       </Form>

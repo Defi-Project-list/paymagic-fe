@@ -46,6 +46,7 @@ function VestingPaymentPage() {
   const contracts = useContractLoader(web3Context.provider);
 
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState({title: '', color: 'primary'})
   const [status, setStatus] = useState(1);
     // 1 - start | 2 - notValid |  3 - isValid
     // 4 - deployTx | 5 - isDeployed | 6 - sendTx
@@ -63,12 +64,32 @@ function VestingPaymentPage() {
     recipient: '',
 
     currentDate: new Date (),
-    startDate: {},
-    cliffDate: {},
-    endDate: {},
+    startDate: 0,
+    cliffDate: 0,
+    endDate: 0,
+
+    salt: '',
 
     confirmationDetails: ''
   })
+
+  useEffect(() => {
+    switch(status) {
+      case 0:
+        setAlert({
+          title: 'An error has occurred. Please refresh the page and try again.',
+          color: 'danger'
+        })
+        break;
+      case 7:
+        setAlert({
+          title: 'Your transaction is complete! Thanks for using Paymagic!',
+          color: 'success'
+        })
+        break;
+      default:
+    }
+  }, [status]);
 
   async function parseFormData(values, errors) {
     // console.log('---Parse Form Data---')
@@ -79,7 +100,7 @@ function VestingPaymentPage() {
     let _parsedData = parsedData
     if(web3Context.ready) {
       // TOKEN ADDRESS
-      let _valueTokenData = false
+      let _validTokenData = false
       let _token = parsedData.token
       if(_.isUndefined(errors.customTokenAddress) && isAddress(values.customTokenAddress)) {
         try {
@@ -91,7 +112,7 @@ function VestingPaymentPage() {
           _token.address = values.customTokenAddress
           _token.symbol = await _token.contract.symbol()
           _token.decimals = await _token.contract.decimals()
-          _valueTokenData = true
+          _validTokenData = true
         }
         catch(err) {
           console.error(err)
@@ -101,7 +122,10 @@ function VestingPaymentPage() {
 
       // TOKEN AMOUNT
       try {
-        _parsedData.tokenAmountBN = ethers.BigNumber.from(values.tokenAmount)
+        _parsedData.tokenAmountBN = ethers.utils.parseUnits(
+          _.toString(values.tokenAmount),
+          _token.decimal
+        )
       } catch(err) {
         console.error(err)
         _parsedData.tokenAmountBN = ethers.BigNumber.from(0)
@@ -111,22 +135,21 @@ function VestingPaymentPage() {
       _parsedData.recipient = getAddress(values.recipient)
 
       // DATES
-      // Convert to block numbers
-      const dater = new EthDater(
-        web3Context.provider
-      )
-      _parsedData.startDate = await dater.getDate(values.startDate)
-      _parsedData.cliffDate = await dater.getDate(values.cliffDate)
-      _parsedData.endDate = await dater.getDate(values.endDate)
+      // Convert to Unix time in seconds
+      _parsedData.startDate = ethers.BigNumber.from(_.round(values.startDate.getTime() / 1000))
+      _parsedData.cliffDate = ethers.BigNumber.from(_.round((values.cliffDate.getTime() - values.startDate.getTime()) / 1000))
+      _parsedData.endDate = ethers.BigNumber.from(_.round((values.endDate.getTime() - values.startDate.getTime()) / 1000))
 
+      // SALT
+      _parsedData.salt = ethers.utils.formatBytes32String(_.toString(_.random(0, 1000)))
 
       _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
-      console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
-      await setParsedData(_parsedData)
+      // console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
+      setParsedData(_parsedData)
 
       // Set validity status
-      if(_valueTokenData) {
+      if(_validTokenData) {
         setStatus(3) 
       } else {
         setStatus(2) 
@@ -159,10 +182,7 @@ function VestingPaymentPage() {
       errors.customTokenAddress = 'Required'
     } else if ( !isAddress(values.customTokenAddress) ){
       errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
-    }   
-
-
-
+    }
 
     // TOKEN AMOUNT
     if (!values.tokenAmount) {
@@ -212,20 +232,38 @@ function VestingPaymentPage() {
     return errors;
   };
 
-  async function handleDeploy(cb) {
-    if(web3Context.ready) {
-      const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(parsedData.token.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), parsedData.token.decimals)), cb);
-    }
+  async function handleApproval(cb) {
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(parsedData.token.contract['approve'](
+      paymagicData.contracts['TokenVestingFactory'].address,
+      parsedData.tokenAmountBN
+    ));
   }
   
-  async function handleSend(cb) {
-    if(web3Context.ready) {
-      const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray), cb);
-    }
+  async function handleCreation(cb) {
+    console.log(`~~Sending tx~~`)
+    console.log(parsedData)
+    console.log(parsedData.startDate.toString())
+    console.log(parsedData.cliffDate.toString())
+    console.log(parsedData.endDate.toString())
+
+    const tx = Transactor(web3Context.provider, cb, gasPrice)
+    tx(contracts['TokenVestingFactory']['deployVesting'](
+      parsedData.recipient,             // address beneficiary,
+      parsedData.startDate,             // uint256 start,
+      parsedData.cliffDate,             // uint256 cliffDuration,
+      parsedData.endDate,               // uint256 duration,
+      false,                            // bool revocable,
+      parsedData.tokenAmountBN,         // uint256 amount,
+      parsedData.token.address,         // IERC20 token,
+      parsedData.salt,                  // bytes32 salt,
+      web3Context.address,              // address owner,
+      web3Context.address               // address tokenHolder
+    ));
   }
 
+  console.log(parsedData)
+  console.log(status)
 
   return (
     <SiteWrapper>
@@ -236,15 +274,18 @@ function VestingPaymentPage() {
             <Link to="/payments">
               <span>{`<< Back`}</span>
             </Link>
-            <Card className="mb-1 mt-1"
+            <Card
+              className="mb-1 mt-1"
               title="Create new Vesting Agreement"
+              alert={alert.title}
+              alertColor={alert.color}
             >
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    customTokenAddress: '',
+                    customTokenAddress: '0xe22da380ee6B445bb8273C81944ADEB6E8450422',
                     tokenAmount: 10,
-                    recipient: '',
+                    recipient: '0x869eC00FA1DC112917c781942Cc01c68521c415e',
                     startDate: parsedData.currentDate,
                     endDate: new Date(
                       parsedData.currentDate.getFullYear()+4,
@@ -262,8 +303,15 @@ function VestingPaymentPage() {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
+                      console.log(txStatus)
+
                       if(txStatus.code && txStatus.code === 4001) {
                         setStatus(3);
+                      } else if(txStatus.code && txStatus.code === 'INVALID_ARGUMENT') {
+                        setStatus(2);
+                      } else if(txStatus.code) {
+                        console.error(txStatus)
+                        setStatus(2);
                       } else if(status === 6 || status === 5) {
                         setStatus(7);
                       } else if(status === 4 || status === 3) {
@@ -275,11 +323,11 @@ function VestingPaymentPage() {
                     if(status === 3) {
                       // ApprovalTx
                       setStatus(4);
-                      handleDeploy(afterMine)
+                      handleApproval(afterMine)
                     } else {
                       // SubmitTx
                       setStatus(6);
-                      handleSend(afterMine)
+                      handleCreation(afterMine)
                     }
                   }}
                 >
@@ -377,11 +425,11 @@ function VestingPaymentPage() {
                                 type="submit"
                                 value="Submit"
                                 className="color "
-                                icon={'send'}
+                                icon={'file-text'}
                                 disabled={status >= 7}
                                 loading={loading}
                               >
-                                Fund with tokens
+                                Create Agreement
                               </Button> ) : (
                               <Button
                                 color="primary"
@@ -392,7 +440,7 @@ function VestingPaymentPage() {
                                 disabled={status < 3 || !_.isEmpty(props.errors)}
                                 loading={loading}
                               >
-                                Initiate Agreement
+                                Approve
                               </Button>
                             )
                           }

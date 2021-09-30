@@ -19,7 +19,7 @@ function About() {
     <SiteWrapper>
       <Page.Content title="ℹ️ About" headerClassName="d-flex justify-content-center">
         <Grid.Row className="d-flex justify-content-center">
-          <Grid.Col sm={6} xl={6}>
+          <Grid.Col sm={8} xl={8}>
             <Card
               statusColor="blue"
               body={(
