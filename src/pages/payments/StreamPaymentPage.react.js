@@ -63,12 +63,13 @@ function StreamingPaymentPage() {
     },
 
     tokenAmountBN: ethers.BigNumber.from(0),
+    flowRate: ethers.BigNumber.from(0),
     recipient: '',
 
     currentDate: new Date (),
     endDate: new Date (),
 
-    ctx: ethers.utils.formatBytes32String("0x"),
+    ctx: ethers.utils.randomBytes(32),
 
     confirmationDetails: ''
   })
@@ -138,8 +139,10 @@ function StreamingPaymentPage() {
       // Convert to tokens/second
       // TotalAmount adjusted for decimals / (endDate - startDate)
       let flowDuration = _.round((values.endDate.getTime() - parsedData.currentDate.getTime()) / 1000)
+      console.log(`flowDuration`)
+      console.log(flowDuration)
       _parsedData.flowRate = _parsedData.tokenAmountBN.div(flowDuration)
-
+      console.log(_parsedData.flowRate.toString())
 
       // _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
@@ -232,20 +235,20 @@ function StreamingPaymentPage() {
   async function handleApproval(cb) {
     const tx = Transactor(web3Context.provider, cb, gasPrice);
     tx(parsedData.token.contract['approve'](
-      paymagicData.contracts['FUSDCX'].address,
+      paymagicData.contracts['USDCX'].address,
       parsedData.tokenAmountBN
     ));
   }
 
   async function handleUpgrade(cb) {
     const tx = Transactor(web3Context.provider, cb, gasPrice);
-    tx(contracts['FUSDCX']["upgrade"](parsedData.tokenAmountBN));
+    tx(contracts['USDCX']["upgrade"](parsedData.tokenAmountBN));
   }
   
   async function handleFlow(cb) {
     const tx = Transactor(web3Context.provider, cb, gasPrice);
     tx(contracts['CFAV1']["createFlow"](
-      paymagicData.contracts['FUSDCX'],
+      paymagicData.contracts['USDCX'].address,
       parsedData.recipient,
       parsedData.flowRate,
       parsedData.ctx
@@ -274,7 +277,7 @@ function StreamingPaymentPage() {
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    customTokenAddress: '0x2eb320e2100a043401e3b3b132d4134f235a6a04',
+                    customTokenAddress: paymagicData.contracts.USDC.address,
                     tokenAmount: 10,
                     recipient: '0x869eC00FA1DC112917c781942Cc01c68521c415e',
                     endDate: new Date(
@@ -288,7 +291,7 @@ function StreamingPaymentPage() {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
-                      console.log(`Completed tx`)
+                      console.log(`tx done`)
                       console.log(txStatus)
                       console.log(status)
                       if(txStatus.code && txStatus.code === 4001) {
