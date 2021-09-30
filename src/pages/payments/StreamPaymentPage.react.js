@@ -145,7 +145,7 @@ function StreamingPaymentPage() {
 
 
       // console.log(`new parsed data ${JSON.stsringify(_parsedData)}`)
-      await setParsedData(_parsedData)
+      setParsedData(_parsedData)
 
       // Set validity status
       if(_validTokenData) {

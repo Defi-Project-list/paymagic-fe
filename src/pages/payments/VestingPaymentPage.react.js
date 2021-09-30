@@ -46,6 +46,7 @@ function VestingPaymentPage() {
   const contracts = useContractLoader(web3Context.provider);
 
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState({title: '', color: 'primary'})
   const [status, setStatus] = useState(1);
     // 1 - start | 2 - notValid |  3 - isValid
     // 4 - deployTx | 5 - isDeployed | 6 - sendTx
@@ -71,6 +72,24 @@ function VestingPaymentPage() {
 
     confirmationDetails: ''
   })
+
+  useEffect(() => {
+    switch(status) {
+      case 0:
+        setAlert({
+          title: 'An error has occurred. Please refresh the page and try again.',
+          color: 'danger'
+        })
+        break;
+      case 7:
+        setAlert({
+          title: 'Your transaction is complete! Thanks for using Paymagic!',
+          color: 'success'
+        })
+        break;
+      default:
+    }
+  }, [status]);
 
   async function parseFormData(values, errors) {
     // console.log('---Parse Form Data---')
@@ -127,7 +146,7 @@ function VestingPaymentPage() {
       _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
       // console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
-      await setParsedData(_parsedData)
+      setParsedData(_parsedData)
 
       // Set validity status
       if(_validTokenData) {
@@ -255,8 +274,11 @@ function VestingPaymentPage() {
             <Link to="/payments">
               <span>{`<< Back`}</span>
             </Link>
-            <Card className="mb-1 mt-1"
+            <Card
+              className="mb-1 mt-1"
               title="Create new Vesting Agreement"
+              alert={alert.title}
+              alertColor={alert.color}
             >
               <Card.Body className="p-1">
                 <Formik
