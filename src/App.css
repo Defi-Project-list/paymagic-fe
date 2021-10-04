@@ -103,3 +103,7 @@ a.disabled > div {
   color: #467fcf;
 }
 
+.progress-bar-container {
+  margin: -0.25rem !important;
+}
+
