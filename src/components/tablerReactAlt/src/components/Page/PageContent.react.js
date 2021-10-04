@@ -6,7 +6,7 @@ import { Container } from "../";
 import PageHeader from "./PageHeader.react";
 import Card from "../Card";
 import Text from "../Text";
-import Dimmer from "../Dimmer";
+// import Dimmer from "../Dimmer";
 
 type Props = {|
   +children?: React.Node,

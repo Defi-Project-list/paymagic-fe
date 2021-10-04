@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
 import { ethers, Contract } from "ethers";
+import Web3 from "web3";
 import * as EthDater from 'ethereum-block-by-date'
 import { Formik } from 'formik';
 import Confetti from 'react-confetti'
@@ -63,12 +64,13 @@ function StreamingPaymentPage() {
     },
 
     tokenAmountBN: ethers.BigNumber.from(0),
+    flowRate: ethers.BigNumber.from(0),
     recipient: '',
 
     currentDate: new Date (),
     endDate: new Date (),
 
-    ctx: ethers.utils.formatBytes32String("0x"),
+    ctx: ethers.utils.randomBytes(32),
 
     confirmationDetails: ''
   })
@@ -232,29 +234,41 @@ function StreamingPaymentPage() {
   async function handleApproval(cb) {
     const tx = Transactor(web3Context.provider, cb, gasPrice);
     tx(parsedData.token.contract['approve'](
-      paymagicData.contracts['FUSDCX'].address,
+      paymagicData.contracts['USDCX'].address,
       parsedData.tokenAmountBN
     ));
   }
 
   async function handleUpgrade(cb) {
     const tx = Transactor(web3Context.provider, cb, gasPrice);
-    tx(contracts['FUSDCX']["upgrade"](parsedData.tokenAmountBN));
+    tx(contracts['USDCX']["upgrade"](parsedData.tokenAmountBN));
   }
   
-  async function handleFlow(cb) {
-    const tx = Transactor(web3Context.provider, cb, gasPrice);
-    tx(contracts['CFAV1']["createFlow"](
-      paymagicData.contracts['FUSDCX'],
+  async function handleCreateFlow(cb) {
+    // Couldn't figure out how to do the ABI encoding with ethers.js
+    // so did it with web3.js instead. Could be replaced later.
+    const web3 = new Web3(web3Context.provider)
+    const contractCFAV1 = new web3.eth.Contract(paymagicData.contracts['CFAV1'].abi)
+    const web3Encodedtx = (contractCFAV1.methods.createFlow(
+      paymagicData.contracts['USDCX'].address,
       parsedData.recipient,
       parsedData.flowRate,
-      parsedData.ctx
-    ));
+      "0x"
+    ).encodeABI())
+    // console.log(web3Encodedtx)
+
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(contracts['HOST']["callAgreement"](
+      paymagicData.contracts['CFAV1'].address,
+      web3Encodedtx,
+      "0x"
+    ))
   }
 
-  console.log(`---Info---`)
-  console.log(`Status ${status}`)
-  console.log(parsedData)
+  // console.log(`---Info---`)
+  // console.log(`Status ${status}`)
+  // console.log(parsedData)
+  // console.log(paymagicData)
 
   return (
     <SiteWrapper>
@@ -274,7 +288,7 @@ function StreamingPaymentPage() {
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    customTokenAddress: '0x2eb320e2100a043401e3b3b132d4134f235a6a04',
+                    customTokenAddress: paymagicData.contracts['USDC'].address,
                     tokenAmount: 10,
                     recipient: '0x869eC00FA1DC112917c781942Cc01c68521c415e',
                     endDate: new Date(
@@ -288,7 +302,7 @@ function StreamingPaymentPage() {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
-                      console.log(`Completed tx`)
+                      console.log(`tx done`)
                       console.log(txStatus)
                       console.log(status)
                       if(txStatus.code && txStatus.code === 4001) {
@@ -317,7 +331,7 @@ function StreamingPaymentPage() {
                     } else if(status === 7) {
                       // FlowTx
                       setStatus(8);
-                      handleFlow(afterMine)
+                      handleCreateFlow(afterMine)
                     }
                   }}
                 >
@@ -343,6 +357,7 @@ function StreamingPaymentPage() {
                             placeholder={`0xa0b8...eb48`}
                             onChange={props.handleChange}
                           />
+                          {true && <span>{`props.errors.tokenAmount`}</span>}
                         </Form.Group>
                         <Form.Group label='AMOUNT' className='m-3'>
                           <NumberFormat

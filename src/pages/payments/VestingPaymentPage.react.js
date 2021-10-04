@@ -68,7 +68,7 @@ function VestingPaymentPage() {
     cliffDate: 0,
     endDate: 0,
 
-    salt: '',
+    salt: ethers.utils.randomBytes(32),
 
     confirmationDetails: ''
   })
@@ -140,9 +140,7 @@ function VestingPaymentPage() {
       _parsedData.cliffDate = ethers.BigNumber.from(_.round((values.cliffDate.getTime() - values.startDate.getTime()) / 1000))
       _parsedData.endDate = ethers.BigNumber.from(_.round((values.endDate.getTime() - values.startDate.getTime()) / 1000))
 
-      // SALT
-      _parsedData.salt = ethers.utils.formatBytes32String(_.toString(_.random(0, 1000)))
-
+      // CONFIRMATION DETAILS
       _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
       // console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
@@ -307,11 +305,9 @@ function VestingPaymentPage() {
 
                       if(txStatus.code && txStatus.code === 4001) {
                         setStatus(3);
-                      } else if(txStatus.code && txStatus.code === 'INVALID_ARGUMENT') {
-                        setStatus(2);
                       } else if(txStatus.code) {
                         console.error(txStatus)
-                        setStatus(2);
+                        setStatus(0);
                       } else if(status === 6 || status === 5) {
                         setStatus(7);
                       } else if(status === 4 || status === 3) {

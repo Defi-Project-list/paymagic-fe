@@ -35,6 +35,7 @@ function Account() {
     const newProvider = new Web3Provider(provider);
     const userNetwork = await newProvider.getNetwork();
     if(network !== userNetwork.name) {
+      console.error(`${network} !== user's network: ${userNetwork.name}`)
       alert(`Wrong network! Please connect to ${network}`);
     } else {
       web3Context.updateProvider(newProvider);
