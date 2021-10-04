@@ -31,15 +31,15 @@ const paymentTypes = [
   {
     title: 'Disperse',
     summary: 'Send tokens to multiple recipients at once',
-    examples: 'Reward followers or pay team members',
+    examples: 'Great for rewarding followers or paying contributors',
     image: '/image/split-payment.png',
     link: '/payments/disperse',
     disabled: false
   },
   {
     title: 'Vesting',
-    summary: 'Start a token vesting schedule agreement',
-    examples: 'Create a vesting schedule for your team or investors',
+    summary: 'Create a token vesting schedule for a recipient',
+    examples: 'Great for distributing tokens over time to your team or investors',
     image: '/image/vesting-payment.png',
     link: '/payments/vesting',
     disabled: false

@@ -17,7 +17,8 @@ import {
   Text,
   Dimmer,
   Button,
-  Form
+  Form,
+  Progress
 } from "tabler-react";
 import SelectToken from "../../components/SelectToken";
 
@@ -258,7 +259,12 @@ function DispersePaymentPage() {
             </Link>
             <Card
               className="mb-1 mt-1"
-              title="Send to many recipients"
+              title={(
+                <div>
+                  <Card.Title>Send to many recipients</Card.Title>
+                  <Text className="card-subtitle">Input any token address and then batch transfer tokens to many different recipients in a single tx.</Text>
+                </div>
+              )}
               alert={alert.title}
               alertColor={alert.color}
             >
@@ -308,6 +314,14 @@ function DispersePaymentPage() {
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
+                        <div className="progress-bar-container">
+                          <Progress size="xs">
+                            <Progress.Bar color="teal" width={[15,15,15,15,30,55,70,100][status]} />
+                          </Progress>
+                          <div className="text-center">
+                            <Text className="card-subtitle">{`Step ${_.max([status - 2, 1])} of 5`}</Text>
+                          </div>
+                        </div>
                         <Form.Group className='m-3'>
                           <Form.Input
                             label='TOKEN ADDRESS'
