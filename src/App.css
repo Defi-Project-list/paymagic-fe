@@ -103,6 +103,10 @@ a.disabled > div {
   color: #467fcf;
 }
 
+.progress {
+  border-radius: 0 !important;
+}
+
 .progress-bar-container {
   margin: -0.25rem !important;
 }
