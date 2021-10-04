@@ -82,9 +82,9 @@ function DispersePaymentPage() {
 
   async function parseFormData(values, errors) {
     // console.log('---Parse Form Data---')
-    // console.log(`values ${JSON.stringify(values)}`)
-    // console.log(`errors ${JSON.stringify(errors)}`)
-    // console.log(`old parsed data ${JSON.stringify(parsedData)}`)
+    // console.log(values)
+    // console.log(errors)
+    // console.log(parsedData)
 
     let _parsedData = parsedData
     if(web3Context.ready) {
@@ -110,27 +110,31 @@ function DispersePaymentPage() {
       }
 
       // RECIPIENTS
-      let _validRecipientsData, _addressArray, _amountArray, _totalAmount
-      try {
-        if(!_.isNull(values.recipients)) {
-          [_validRecipientsData, _addressArray, _amountArray, _totalAmount] = await parseRecipientsText(values.recipients, _parsedData)
-          let _confirmationDetails = formatConfirmationDetails(_addressArray, _amountArray, _totalAmount, _parsedData)
-          
-          _parsedData.addressArray = _addressArray
-          _parsedData.amountArray = _amountArray
-          _parsedData.totalAmount = _totalAmount
-          _parsedData.confirmationDetails = _confirmationDetails
+      // Calculate totalAmountBN
+      if(_.isEmpty(errors) && values.totalAmount) {
+        _parsedData.totalAmountBN = ethers.utils.parseUnits(
+          _.toString(values.totalAmount),
+          parsedData.token.decimals
+        )
+
+        // CONFIRMATION DETAILS
+        if(_.isEmpty(errors)) {
+          _parsedData.confirmationDetails = formatConfirmationDetails(
+            values.addressArray,
+            values.amountArray,
+            values.totalAmount,
+            _parsedData.token.symbol
+          )
         }
-      }
-      catch(err) {
-        console.error(err)
-        setStatus(2)
+      } else {
+        _parsedData.totalAmountBN = ethers.BigNumber.from(0)
+        _parsedData.confirmationDetails = ''
       }
 
       setParsedData(_parsedData)
 
       // Set validity status
-      if(_validRecipientsData && _validTokenData) {
+      if(_.isEmpty(errors)) {
         setStatus(3)
       } else {
         setStatus(2) 
@@ -138,7 +142,8 @@ function DispersePaymentPage() {
     }
   }
 
-  async function parseRecipientsText(recipients, _parsedData) {
+
+  async function parseRecipients(recipients) {
     let _addressArray = []
     let _amountArray = []
     let _totalAmount = 0
@@ -153,21 +158,14 @@ function DispersePaymentPage() {
     try {
       parsed.forEach( (a,i) =>{
         _addressArray[i] = _.get(a, 'field1', null)
-        let tempAmount = _.toNumber(
+        let temp = _.toNumber(
           _.get(a, 'field2', 0)
         )
-        _totalAmount = _totalAmount + tempAmount
-        _amountArray[i] = ethers.utils.parseUnits(
-          _.toString(tempAmount),
-          _parsedData.token.decimals
-        )
+        _amountArray[i] = _.isFinite(temp) ? temp : 0 // isFinite excludes NaN
+        _totalAmount += _amountArray[i]
       })
 
-      let _status = status >= 4 ? status :
-        _addressArray.length === _amountArray.length ? 3 : 2
-
       return [
-        _status,
         _addressArray,
         _amountArray,
         _totalAmount
@@ -176,7 +174,6 @@ function DispersePaymentPage() {
     catch(err) {
       console.error(err)
       return [
-        2,
         [],
         [],
         0
@@ -184,16 +181,12 @@ function DispersePaymentPage() {
     }
   }
 
-  function formatConfirmationDetails(_addressArray, _amountArray, _totalAmount, _parsedData) {
+  function formatConfirmationDetails(_addressArray, _amountArray, _totalAmount, symbol) {
     let tempDetails = _addressArray.map((a, i) => {
-      let tempBN = _amountArray[i] ? _amountArray[i] : ethers.BigNumber.from(0)
-      let tempNumber = ethers.utils.formatUnits(
-        tempBN, _parsedData.token.decimals
-      )
-      return `${_addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${_parsedData.token.symbol}`
+      return `${_addressArray[i]}  ${numeral(_amountArray[i]).format('0,0.0000')} ${symbol}`
     })
 
-    return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${_parsedData.token.symbol}\n`
+    return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${symbol}\n`
   }
 
   const validateRules = async values => {
@@ -206,35 +199,29 @@ function DispersePaymentPage() {
       errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
     }
 
-    // RECIPIENTS    
-    let validAddresses = !_.includes(
-      parsedData.addressArray.map(x => {
-        try {
-          let temp = ethers.utils.getAddress(x)
-          return ethers.utils.isAddress(temp)
-        } catch {
-          return false
-        }
-      }),
-      false
-    )
-    if (!values.recipients) {
+    // RECIPIENTS
+    if (!values.recipients || _.isEmpty(values.addressArray) || _.isEmpty(values.amountArray)) {
       errors.recipients = 'Required';
-    } else if (!validAddresses) {
+    } else if (values.addressArray.length !== values.amountArray.length) {
       errors.recipients = 'Unable to parse the text. Please try again.';
+    }
+
+    for (let i = 0; i < values.addressArray.length; i++) {
+      if(!isAddress(values.addressArray[i]) || !_.isFinite(values.amountArray[i])) {
+        errors.recipients = 'Unable to parse the text. Please try again.';
+        break;
+      }
     }
 
     // Validate Token Balance
     if(parsedData.token.contract) {
       let tokenBalanceBN = await parsedData.token.contract["balanceOf"](...[web3Context.address]);
 
-      if (parsedData.totalAmount <= 0 && !_.isNumber(parsedData.totalAmount)) {
+      if (values.totalAmount <= 0 || !_.isFinite(values.totalAmount)) {
         errors.recipients = 'Unable to parse the text. Please try again.';
-      }
-
-      if (tokenBalanceBN.lt(
+      } else if(tokenBalanceBN.lt(
           ethers.utils.parseUnits(
-            _.toString(parsedData.totalAmount),
+            _.toString(values.totalAmount),
             parsedData.token.decimals
           )
         )
@@ -249,7 +236,7 @@ function DispersePaymentPage() {
   async function handleApproval(cb) {
     if(web3Context.ready) {
       const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(parsedData.token.contract["approve"](paymagicData.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), parsedData.token.decimals)));
+      tx(parsedData.token.contract["approve"](paymagicData.contracts.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), parsedData.token.decimals)));
     }
   }
   
@@ -281,6 +268,9 @@ function DispersePaymentPage() {
                     token: '',
                     customTokenAddress: '',
                     recipients: '',
+                    addressArray: [],
+                    amountArray: [],
+                    totalAmount: 0
                   }}
                   validate={ validateRules }
                   onSubmit={async (values, actions) => {
@@ -343,7 +333,14 @@ function DispersePaymentPage() {
 0x5a0b54d5dc17e0aadc383d2db43b0a0d3e029c4c, 3
 0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8, 4
 ...`}
-                            onChange={props.handleChange}
+                            onChange={async (e) => {
+                              let val = e.currentTarget.value
+                              let [a, b, c] = await parseRecipients(val)
+                              props.setFieldValue('recipients', val)
+                              props.setFieldValue('addressArray', a)
+                              props.setFieldValue('amountArray', b)
+                              props.setFieldValue('totalAmount', c)
+                            }}
                           />
                           <Form.Group label="CONFIRMATION DETAILS">
                             <Form.StaticText className="whitespace-preline">

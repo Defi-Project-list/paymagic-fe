@@ -140,10 +140,8 @@ function StreamingPaymentPage() {
       // Convert to tokens/second
       // TotalAmount adjusted for decimals / (endDate - startDate)
       let flowDuration = _.round((values.endDate.getTime() - parsedData.currentDate.getTime()) / 1000)
-      console.log(`flowDuration`)
-      console.log(flowDuration)
       _parsedData.flowRate = _parsedData.tokenAmountBN.div(flowDuration)
-      console.log(_parsedData.flowRate.toString())
+
 
       // _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
