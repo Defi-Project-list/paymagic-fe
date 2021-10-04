@@ -18,7 +18,8 @@ import {
   Text,
   Dimmer,
   Button,
-  Form
+  Form,
+  Progress
 } from "tabler-react";
 import SelectToken from "../../components/SelectToken";
 import NumberFormat from 'react-number-format';
@@ -70,7 +71,7 @@ function VestingPaymentPage() {
 
     salt: ethers.utils.randomBytes(32),
 
-    confirmationDetails: ''
+    // confirmationDetails: ''
   })
 
   useEffect(() => {
@@ -141,7 +142,7 @@ function VestingPaymentPage() {
       _parsedData.endDate = ethers.BigNumber.from(_.round((values.endDate.getTime() - values.startDate.getTime()) / 1000))
 
       // CONFIRMATION DETAILS
-      _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
+      // _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
 
       // console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
       setParsedData(_parsedData)
@@ -279,14 +280,14 @@ function VestingPaymentPage() {
               title={(
                 <div>
                   <Card.Title>Create new Vesting Agreement</Card.Title>
-                  <Text className="card-subtitle">Deploy a new copy of the <a href='https://github.com/GimmerBot/zeppelin-solidity/blob/master/contracts/token/TokenVesting.sol' target='_blank'>OpenZeppelin Vesting contract</a> and send tokens to the recipient that vest linearly after the cliff date.</Text>
+                  <Text className="card-subtitle">Deploy a new copy of the <a href='https://github.com/GimmerBot/zeppelin-solidity/blob/master/contracts/token/TokenVesting.sol' target='_blank'>OpenZeppelin Vesting contract</a> and send tokens to a recipient that vest linearly after the cliff date.</Text>
                 </div>
               )}
             >
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    customTokenAddress: '0xe22da380ee6B445bb8273C81944ADEB6E8450422',
+                    customTokenAddress: '0x2eB320E2100A043401e3B3B132d4134F235A6A04',
                     tokenAmount: 10,
                     recipient: '0x869eC00FA1DC112917c781942Cc01c68521c415e',
                     startDate: parsedData.currentDate,
@@ -343,6 +344,14 @@ function VestingPaymentPage() {
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
+                        <div className="progress-bar-container">
+                          <Progress size="xs">
+                            <Progress.Bar color="teal" width={[15,15,15,15,30,55,70,100][status]} />
+                          </Progress>
+                          <div className="text-center">
+                            <Text className="card-subtitle">{`Step ${_.max([status - 2, 1])} of 5`}</Text>
+                          </div>
+                        </div>
                         <Form.Group className='m-3'>
                           <Form.Input
                             label='TOKEN ADDRESS'
@@ -413,11 +422,11 @@ function VestingPaymentPage() {
                           />
                           {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
                         </Form.Group>
-                        <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
+                        {false && <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
                           <Form.StaticText className="whitespace-preline">
                             { parsedData.confirmationDetails }
                           </Form.StaticText>
-                        </Form.Group>
+                        </Form.Group>}
                         <Form.Group className='m-3'>
                           { 
                             (status >= 5) ? (

@@ -39,7 +39,7 @@ const paymentTypes = [
   {
     title: 'Vesting',
     summary: 'Create a token vesting schedule for a recipient',
-    examples: 'Great for vesting tokens over time to your team or investors',
+    examples: 'Great for distributing tokens over time to your team or investors',
     image: '/image/vesting-payment.png',
     link: '/payments/vesting',
     disabled: false

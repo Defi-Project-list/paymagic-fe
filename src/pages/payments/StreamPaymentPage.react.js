@@ -20,7 +20,8 @@ import {
   Text,
   Dimmer,
   Button,
-  Form
+  Form,
+  Progress
 } from "tabler-react";
 import SelectToken from "../../components/SelectToken";
 import NumberFormat from 'react-number-format';
@@ -351,6 +352,14 @@ function StreamingPaymentPage() {
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
+                        <div className="progress-bar-container">
+                          <Progress size="xs">
+                            <Progress.Bar color="teal" width={[10,10,10,10,20,30,45,65,80,100][status]} />
+                          </Progress>
+                          <div className="text-center">
+                            <Text className="card-subtitle">{`Step ${_.max([status - 2, 1])} of 7`}</Text>
+                          </div>
+                        </div>
                         <Form.Group label="TOKEN" className='m-3'>
                           <Form.SelectGroup
                             label='TOKEN ADDRESS'
