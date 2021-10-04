@@ -93,3 +93,13 @@ a.disabled > div {
   white-space: pre-line;  
 }
 
+.card-subtitle {
+  margin-top: .375rem !important;
+  margin-bottom: .375rem !important;
+  line-height: inherit !important;
+}
+
+.card-title a {
+  color: #467fcf;
+}
+

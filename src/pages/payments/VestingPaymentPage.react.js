@@ -274,9 +274,14 @@ function VestingPaymentPage() {
             </Link>
             <Card
               className="mb-1 mt-1"
-              title="Create new Vesting Agreement"
               alert={alert.title}
               alertColor={alert.color}
+              title={(
+                <div>
+                  <Card.Title>Create new Vesting Agreement</Card.Title>
+                  <Text className="card-subtitle">Deploy a new copy of the <a href='https://github.com/GimmerBot/zeppelin-solidity/blob/master/contracts/token/TokenVesting.sol' target='_blank'>OpenZeppelin Vesting contract</a> and send tokens to the recipient that vest linearly after the cliff date.</Text>
+                </div>
+              )}
             >
               <Card.Body className="p-1">
                 <Formik

@@ -265,10 +265,10 @@ function StreamingPaymentPage() {
     ))
   }
 
-  // console.log(`---Info---`)
-  // console.log(`Status ${status}`)
-  // console.log(parsedData)
-  // console.log(paymagicData)
+  console.log(`---Info---`)
+  console.log(`Status ${status}`)
+  console.log(parsedData)
+  console.log(paymagicData)
 
   return (
     <SiteWrapper>
@@ -281,16 +281,21 @@ function StreamingPaymentPage() {
             </Link>
             <Card 
               className="mb-1 mt-1"
-              title="Create new Streaming Payment"
+              title={(
+                <div>
+                  <Card.Title>Create new Streaming Payment</Card.Title>
+                  <Text className="card-subtitle">Use <a href='https://www.superfluid.finance' target='_blank'>Superfluid</a> to send a continously stream of tokens instantly claimable by the recipient for subscriptions, salaries, rewards, and more.</Text>
+                </div>
+              )}
               alert={alert.title}
               alertColor={alert.color}
             >
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    customTokenAddress: paymagicData.contracts['USDC'].address,
+                    customTokenAddress: '',
                     tokenAmount: 10,
-                    recipient: '0x869eC00FA1DC112917c781942Cc01c68521c415e',
+                    recipient: '',
                     endDate: new Date(
                       parsedData.currentDate.getFullYear()+1,
                       parsedData.currentDate.getMonth(),
@@ -346,19 +351,52 @@ function StreamingPaymentPage() {
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
-                        <Form.Group className='m-3'>
-                          <Form.Input
+                        <Form.Group label="TOKEN" className='m-3'>
+                          <Form.SelectGroup
                             label='TOKEN ADDRESS'
-                            name='customTokenAddress'
                             value={props.values.customTokenAddress}
                             error={props.errors.customTokenAddress }
                             className='mb-3'
                             disabled={status >= 4}
-                            placeholder={`0xa0b8...eb48`}
+                            name='customTokenAddress'
                             onChange={props.handleChange}
-                          />
-                          {true && <span>{`props.errors.tokenAmount`}</span>}
+                            canSelectMultiple={false}
+                          >
+                            <Form.SelectGroupItem
+                              label="USDC"
+                              value={paymagicData.contracts["USDC"].address}
+                              name='customTokenAddress'
+                              onChange={props.handleChange}
+                            />
+                            <Form.SelectGroupItem
+                              label="DAI"
+                              value={paymagicData.contracts["DAI"].address}
+                              name='customTokenAddress'
+                              onChange={props.handleChange}
+                            />
+                            <Form.SelectGroupItem
+                              label="WBTC"
+                              value={paymagicData.contracts["WBTC"].address}
+                              name='customTokenAddress'
+                              onChange={props.handleChange}
+                            />
+                          </Form.SelectGroup>
+                          {props.errors.customTokenAddress && <span>{props.errors.customTokenAddress}</span>}
                         </Form.Group>
+                        { false &&
+                          <Form.Group className='m-3'>
+                            <Form.Input
+                              label='TOKEN ADDRESS'
+                              name='customTokenAddress'
+                              value={props.values.customTokenAddress}
+                              error={props.errors.customTokenAddress }
+                              className='mb-3'
+                              disabled={status >= 4}
+                              placeholder={`0xa0b8...eb48`}
+                              onChange={props.handleChange}
+                            />
+                          </Form.Group>
+                        }
                         <Form.Group label='AMOUNT' className='m-3'>
                           <NumberFormat
                             placeholder="0.00"

@@ -258,7 +258,12 @@ function DispersePaymentPage() {
             </Link>
             <Card
               className="mb-1 mt-1"
-              title="Send to many recipients"
+              title={(
+                <div>
+                  <Card.Title>Send to many recipients</Card.Title>
+                  <Text className="card-subtitle">Input any token address and then batch transfer tokens to many different recipients in a single tx.</Text>
+                </div>
+              )}
               alert={alert.title}
               alertColor={alert.color}
             >
