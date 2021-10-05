@@ -1,6 +1,7 @@
 import { hexlify } from "@ethersproject/bytes";
 import { parseUnits } from "@ethersproject/units";
 import { notification } from "antd";
+import { BLOCKNATIVE_ID } from "../config";
 
 import Notify from "bnc-notify";
 
@@ -15,7 +16,7 @@ export default function Transactor(provider, cb, gasPrice, etherscan) {
       const signer = provider.getSigner();
       const network = await provider.getNetwork();
       const options = {
-        dappId: "e6afe269-3ff9-4c3f-897e-6350774f7355", // GET YOUR OWN KEY AT https://account.blocknative.com
+        dappId: BLOCKNATIVE_ID,
         system: "ethereum",
         networkId: network.chainId,
         desktopPosition: "topRight",
