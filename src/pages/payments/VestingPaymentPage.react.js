@@ -35,7 +35,8 @@ import {
   getTokenIconUriFromAddress,
   getTokenDataFromAddress,
   getAddress,
-  isAddress } from "../../utils";
+  isAddress,
+  isToken } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
 
@@ -103,7 +104,7 @@ function VestingPaymentPage() {
       // TOKEN ADDRESS
       let _validTokenData = false
       let _token = parsedData.token
-      if(_.isUndefined(errors.customTokenAddress) && isAddress(values.customTokenAddress)) {
+      if(isAddress(values.customTokenAddress) && isToken(values.customTokenAddress)) {
         try {
           _token.contract = new Contract(
             getAddress(values.customTokenAddress),
@@ -121,11 +122,12 @@ function VestingPaymentPage() {
         }
       }
 
+
       // TOKEN AMOUNT
       try {
         _parsedData.tokenAmountBN = ethers.utils.parseUnits(
           _.toString(values.tokenAmount),
-          _token.decimal
+          _token.decimals.toNumber()
         )
       } catch(err) {
         console.error(err)
@@ -181,6 +183,8 @@ function VestingPaymentPage() {
       errors.customTokenAddress = 'Required'
     } else if ( !isAddress(values.customTokenAddress) ){
       errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
+    } else if ( !isToken(values.customTokenAddress) ){
+      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
     }
 
     // TOKEN AMOUNT
@@ -196,7 +200,7 @@ function VestingPaymentPage() {
       if (tokenBalanceBN.lt(
           ethers.utils.parseUnits(
             _.toString(values.tokenAmount),
-            parsedData.token.decimals
+            parsedData.token.decimals.toNumber()
           )
         )
       ) {
@@ -240,11 +244,8 @@ function VestingPaymentPage() {
   }
   
   async function handleCreation(cb) {
-    console.log(`~~Sending tx~~`)
-    console.log(parsedData)
-    console.log(parsedData.startDate.toString())
-    console.log(parsedData.cliffDate.toString())
-    console.log(parsedData.endDate.toString())
+    // console.log(`~~Sending tx~~`)
+    // console.log(parsedData)
 
     const tx = Transactor(web3Context.provider, cb, gasPrice)
     tx(contracts['TokenVestingFactory']['deployVesting'](
@@ -261,8 +262,8 @@ function VestingPaymentPage() {
     ));
   }
 
-  console.log(parsedData)
-  console.log(status)
+  // console.log(parsedData)
+  // console.log(status)
 
   return (
     <SiteWrapper>
@@ -287,9 +288,9 @@ function VestingPaymentPage() {
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    customTokenAddress: '0x2eB320E2100A043401e3B3B132d4134F235A6A04',
-                    tokenAmount: 10,
-                    recipient: '0x869eC00FA1DC112917c781942Cc01c68521c415e',
+                    customTokenAddress: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
+                    tokenAmount: 1,
+                    recipient: '0x550abC18F49CB82644dF58885A3A049A021D54e0',
                     startDate: parsedData.currentDate,
                     endDate: new Date(
                       parsedData.currentDate.getFullYear()+4,
@@ -375,7 +376,7 @@ function VestingPaymentPage() {
                             className={"form-control"}
                             onValueChange={val => props.setFieldValue('tokenAmount',val.value)}
                           />
-                          {props.errors.tokenAmount && <span className="invalid-feedback">{props.errors.tokenAmount}</span>}
+                          {props.errors.tokenAmount && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.tokenAmount}</span>}
                         </Form.Group>
                         <Form.Group className='m-3'>
                           <Form.Input
