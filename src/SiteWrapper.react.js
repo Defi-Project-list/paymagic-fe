@@ -1,7 +1,7 @@
 // @flow
 
 import * as React from "react";
-import { NavLink, withRouter, useHistory } from "react-router-dom";
+import { NavLink, withRouter } from "react-router-dom";
 import _ from 'lodash';
 
 import {
@@ -98,8 +98,6 @@ const networkOptions = [
 ]
 
 function SiteWrapper(props: Props): React.Component {
-  const history = useHistory();
-  const handleNetworkDropdown = (url) => history.push(url);
 
   return (
     <Site.Wrapper

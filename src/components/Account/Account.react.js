@@ -9,7 +9,7 @@ import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import {  Web3Provider } from "@ethersproject/providers";
 import { useUserAddress } from "eth-hooks";
-import { shortenAddress } from "../../utils"
+import { isAddress, shortenAddress } from "../../utils"
 import { Web3Context } from '../../App.react';
 import { INFURA_ID, network } from "../../config";
 
@@ -52,23 +52,27 @@ function Account() {
   if (web3Modal) {
     if (web3Modal.cachedProvider) {
       modalButtons.push(
-        <Button
-          size="md"
-          color="secondary"
-          outline
-          RootComponent="a"
-          className="d-none d-md-flex"
-          key="logoutbutton"
-          onClick={logoutOfWeb3Modal}
-        >
-          Disconnect 
-        </Button>
+        <div className="text-center">
+          <Text.Small>{isAddress(address) ? shortenAddress(address) : ''}</Text.Small>
+          <Button
+            size="sm"
+            color="secondary"
+            outline
+            RootComponent="a"
+            className="d-none d-md-flex"
+            key="logoutbutton"
+            onClick={logoutOfWeb3Modal}
+            pill
+          >
+            Disconnect 
+          </Button>
+        </div>
       );
     } else {
       modalButtons.push(
         <Button
           size="md"
-          color="blue"
+          color="purple"
           className="d-none d-md-flex"
           key="loginbutton"
           onClick={loadWeb3Modal}
@@ -81,11 +85,6 @@ function Account() {
 
   return (
     <React.Fragment>
-      {
-        !!address && (
-          <Text className={'mr-2'}>{shortenAddress(address)}</Text>
-        )
-      }
       {modalButtons}
     </React.Fragment>
   );
