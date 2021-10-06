@@ -5,7 +5,6 @@ import { NavLink, withRouter } from "react-router-dom";
 import _ from 'lodash';
 
 import {
-  Nav,
   Grid,
   List,
   RouterContextProvider,
@@ -14,6 +13,7 @@ import {
 import Select from 'react-select'
 
 import Site from "./components/tablerReactAlt/src/components/Site";
+import Nav from "./components/tablerReactAlt/src/components/Nav";
 import Account from "./components/Account";
 import { env } from "./config";
 
@@ -111,7 +111,7 @@ function SiteWrapper(props: Props): React.Component {
             <Nav.Item type="div" className="d-flex" key={2}>
               <Account />
             </Nav.Item>
-            <Nav.Item hasSubNav value={_.capitalize(env)} icon="globe" type = "div" position="bottom-start">
+            <Nav.Item hasSubNav value={_.capitalize(env)} icon="globe" type = "div" position="bottom-end">
               <Nav.SubItem value="Polygon" to="https://polygon.paymagic.xyz"/>
               <Nav.SubItem value="Kovan" to="https://kovan.paymagic.xyz"/>
             </Nav.Item>
