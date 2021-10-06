@@ -28,6 +28,10 @@ a:not([href]):not([tabindex]).btn-primary {
   font-size: 1rem;
 }
 
+.header a > i {
+  padding-right: 0.25rem !important;
+}
+
 .nav-tabs .nav-link {
   border-width: 3px;
 }
