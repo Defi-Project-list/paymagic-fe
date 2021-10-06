@@ -62,7 +62,7 @@ function Account() {
             className="d-none d-md-flex"
             key="logoutbutton"
             onClick={logoutOfWeb3Modal}
-            pill
+            square
           >
             Disconnect 
           </Button>

@@ -135,7 +135,7 @@ function SiteWrapper(props: Props): React.Component {
             <Grid.Col auto={true} className="d-flex">
               <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
                 <List.Item className="list-inline-item">
-                  <a href="https://twitter.com/0xViabull" target="_blank" rel="noopener noreferrer">Telegram</a>
+                  <a href="https://t.me/paymagics" target="_blank" rel="noopener noreferrer">Telegram</a>
                 </List.Item>
               </List>
             </Grid.Col>
