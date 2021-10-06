@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import _ from 'lodash';
 import axios from "axios";
+import { ZAPPER_ID, NETWORK } from '../config'
 
-const zapperApiKey = `96e0cc51-a62e-42ca-acee-910ea7d2a241`;
-const network = `ethereum`;
+const zapperApiKey = ZAPPER_ID;
+const network = NETWORK;
 
 export async function getAssets(address) {
   try {
