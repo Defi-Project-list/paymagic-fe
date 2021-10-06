@@ -11,7 +11,7 @@ import {  Web3Provider } from "@ethersproject/providers";
 import { useUserAddress } from "eth-hooks";
 import { isAddress, shortenAddress } from "../../utils"
 import { Web3Context } from '../../App.react';
-import { INFURA_ID, network } from "../../config";
+import { INFURA_ID, NETWORK } from "../../config";
 
 // const mainnetProvider = new JsonRpcProvider("https://mainnet.infura.io/v3/"+INFURA_ID)
 // const localProviderUrl = "http://"+window.location.hostname+":8545";
@@ -34,9 +34,9 @@ function Account() {
     const provider = await web3Modal.connect();
     const newProvider = new Web3Provider(provider);
     const userNetwork = await newProvider.getNetwork();
-    if(network !== userNetwork.name) {
-      console.error(`${network} !== user's network: ${userNetwork.name}`)
-      alert(`Wrong network! Please connect to ${network}`);
+    if(NETWORK !== userNetwork.name) {
+      console.error(`${NETWORK} !== user's network: ${userNetwork.name}`)
+      alert(`Wrong network! Please connect to ${NETWORK}`);
     } else {
       web3Context.updateProvider(newProvider);
       setInjectedProvider(newProvider);

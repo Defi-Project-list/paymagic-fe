@@ -5,7 +5,6 @@ import _ from 'lodash';
 import numeral from 'numeral';
 
 import {
-  Page,
   Grid,
   Card,
   Text,
@@ -18,6 +17,7 @@ import {
   Avatar
 } from "tabler-react";
 import SiteWrapper from "../SiteWrapper.react";
+import Page from '../components/tablerReactAlt/src/components/Page'
 import TokenBalanceCard from "../components/TokenBalanceCard";
 import TxCard from "../components/TxCard";
 
@@ -33,27 +33,9 @@ function Transaction() {
 
   const title = `📄 Transactions`
 
-  if(!web3Context.ready)
-    return (
-      <SiteWrapper>
-        <Page.Content title={title} headerClassName="d-flex justify-content-center">
-          <Card><Card.Body><Text className="text-center font-italic">Connect Wallet Above<span role="img">👆</span></Text></Card.Body></Card>
-        </Page.Content>
-      </SiteWrapper>
-    )
-
-  if(walletContext.loading)
-    return (
-      <SiteWrapper>
-        <Page.Content title={title} headerClassName="d-flex justify-content-center">
-          <Dimmer active loader className="mt-8"/>
-        </Page.Content>
-      </SiteWrapper>
-    )
-
   return (
     <SiteWrapper>
-      <Page.Content title={title} headerClassName="d-flex justify-content-center">
+      <Page.Content title={title} headerClassName="d-flex justify-content-center" web3ContextReady={web3Context.ready} walletContextLoading={walletContext.loading}>
         <Grid.Row className="d-flex justify-content-center">
           <Grid.Col lg={12}>
             <TxCard

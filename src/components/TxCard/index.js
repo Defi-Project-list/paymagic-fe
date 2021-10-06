@@ -98,7 +98,7 @@ function TxCard(props) {
 
   return (
     <Card className="mb-1"
-      title="Transactions"
+      title="Last 10 Transactions"
     >
       <Table
         responsive
@@ -113,7 +113,10 @@ function TxCard(props) {
           { content: "TxHash" }
         ]}
         bodyItems={
-          returnRowContent(txs)
+          !_.isEmpty(txs) ? returnRowContent(txs) : null
+        }
+        children={
+          !_.isEmpty(txs) ? null : (<Text className="text-center font-italic">No transactions available</Text>)
         }
       />
     </Card>

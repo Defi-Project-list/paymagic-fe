@@ -58,12 +58,12 @@ const navBarItems: Array<navItem> = [
   //   icon: "dollar-sign",
   //   LinkComponent: withRouter(NavLink),
   // },
-  // {
-  //   value: "Transactions",
-  //   to: "/transactions",
-  //   icon: "layers",
-  //   LinkComponent: withRouter(NavLink),
-  // },
+  {
+    value: "Transactions",
+    to: "/transactions",
+    icon: "layers",
+    LinkComponent: withRouter(NavLink),
+  },
 
   // {
   //   value: "DeFi Data",
