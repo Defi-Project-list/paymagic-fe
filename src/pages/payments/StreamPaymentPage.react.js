@@ -9,8 +9,6 @@ import Web3 from "web3";
 import * as EthDater from 'ethereum-block-by-date'
 import { Formik } from 'formik';
 import Confetti from 'react-confetti'
-// import * as SuperfluidSDK from "@superfluid-finance/js-sdk"
-
 
 import SiteWrapper from "../../SiteWrapper.react";
 import Page from '../../components/tablerReactAlt/src/components/Page'

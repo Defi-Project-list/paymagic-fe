@@ -8,6 +8,7 @@ import {
   Grid,
   List,
   RouterContextProvider,
+  Text
 } from "tabler-react";
 
 import Site from "./components/tablerReactAlt/src/components/Site";
@@ -110,8 +111,10 @@ class SiteWrapper extends React.Component<Props, State> {
         footerProps={{
           copyright: (
             <React.Fragment>
-              Copyright © 2021
-              <a href="https://twitter.com/corbpage" target="_blank" rel="noopener noreferrer"> Paymagic</a>. All rights reserved.
+              {false && <Text>
+                Copyright © 2021
+                <a href="https://twitter.com/0xViabull" target="_blank" rel="noopener noreferrer"> Paymagic</a>. All rights reserved.
+              </Text>}
             </React.Fragment>
           ),
           nav: (

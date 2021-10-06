@@ -4,6 +4,7 @@ import React, { useContext } from 'react';
 import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
+import { env } from '../config'
 
 import {
   Page,
