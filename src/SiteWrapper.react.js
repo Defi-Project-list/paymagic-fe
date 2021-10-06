@@ -5,7 +5,6 @@ import { NavLink, withRouter } from "react-router-dom";
 import _ from 'lodash';
 
 import {
-  Nav,
   Grid,
   List,
   RouterContextProvider,
@@ -14,6 +13,7 @@ import {
 import Select from 'react-select'
 
 import Site from "./components/tablerReactAlt/src/components/Site";
+import Nav from "./components/tablerReactAlt/src/components/Nav";
 import Account from "./components/Account";
 import { env } from "./config";
 
@@ -111,7 +111,7 @@ function SiteWrapper(props: Props): React.Component {
             <Nav.Item type="div" className="d-flex" key={2}>
               <Account />
             </Nav.Item>
-            <Nav.Item hasSubNav value={_.capitalize(env)} icon="globe" type = "div" position="bottom-start">
+            <Nav.Item hasSubNav value={_.capitalize(env)} icon="globe" type = "div" position="bottom-end">
               <Nav.SubItem value="Polygon" to="https://polygon.paymagic.xyz"/>
               <Nav.SubItem value="Kovan" to="https://kovan.paymagic.xyz"/>
             </Nav.Item>
@@ -135,7 +135,7 @@ function SiteWrapper(props: Props): React.Component {
             <Grid.Col auto={true} className="d-flex">
               <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
                 <List.Item className="list-inline-item">
-                  <a href="https://twitter.com/0xViabull" target="_blank" rel="noopener noreferrer">Telegram</a>
+                  <a href="https://t.me/paymagics" target="_blank" rel="noopener noreferrer">Telegram</a>
                 </List.Item>
               </List>
             </Grid.Col>

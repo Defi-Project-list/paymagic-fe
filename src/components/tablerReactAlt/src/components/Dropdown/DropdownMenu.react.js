@@ -36,9 +36,9 @@ export type Props = {|
 function DropdownMenu({
   className,
   children,
-  position = "bottom",
+  position,
   arrow,
-  arrowPosition = "left",
+  arrowPosition = "right",
   style,
   rootRef,
   show = false,

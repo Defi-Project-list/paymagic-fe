@@ -47,6 +47,16 @@ a:not([href]):not([tabindex]).btn-primary {
   align-self: center;
 }
 
+.header-brand{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-brand span.h1 {
+  margin-bottom: 0 !important;
+}
+
 
 
 .hide {

@@ -102,7 +102,7 @@ function PaymentsPage() {
   function returnPaymentTypeCard(items) {
     return items.map((item, key) => {
       return (
-        <Grid.Col lg={4} key={key}>
+        <Grid.Col lg={4} md={6} sm={6} xs={12} key={key}>
           <Link to={item.disabled ? '#' : item.link} className={item.disabled ? 'no-decoration disabled' : 'no-decoration'}>
             <Card className="mb-1 text-center">
               <Card.Body className="p-3">
