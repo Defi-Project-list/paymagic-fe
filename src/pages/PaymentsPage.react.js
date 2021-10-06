@@ -4,6 +4,7 @@ import React, { useContext } from 'react';
 import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
+import { env } from '../config'
 
 import {
   Page,
@@ -45,20 +46,20 @@ const paymentTypes = [
     disabled: false
   },
   {
-    title: 'Airdrop',
-    summary: 'Send token rewards for recipients to claim',
-    examples: 'Reward liquidity providers, users, or communities',
-    image: '/image/airdrop-payment.png',
-    link: '/payments/airdrop',
-    disabled: false
-  },
-  {
     title: 'Stream',
     summary: 'Send tokens continuously by the second',
     examples: 'Create real-time subscriptions, salaries, or vesting',
     image: '/image/stream-payment.png',
     link: '/payments/stream',
     disabled: false
+  },
+  {
+    title: 'Airdrop',
+    summary: 'Send token rewards for recipients to claim',
+    examples: 'Reward liquidity providers, users, or communities',
+    image: '/image/airdrop-payment.png',
+    link: '/payments/airdrop',
+    disabled: true
   },
   {
     title: 'Escrow',

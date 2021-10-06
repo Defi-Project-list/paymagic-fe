@@ -9,8 +9,6 @@ import Web3 from "web3";
 import * as EthDater from 'ethereum-block-by-date'
 import { Formik } from 'formik';
 import Confetti from 'react-confetti'
-// import * as SuperfluidSDK from "@superfluid-finance/js-sdk"
-
 
 import SiteWrapper from "../../SiteWrapper.react";
 import Page from '../../components/tablerReactAlt/src/components/Page'
@@ -125,8 +123,9 @@ function StreamingPaymentPage() {
 
       // TOKEN AMOUNT
       try {
+        let _tempAmount = values.tokenAmount ? values.tokenAmount : 0
         _parsedData.tokenAmountBN = ethers.utils.parseUnits(
-          _.toString(values.tokenAmount),
+          _.toString(_tempAmount),
           _token.decimal
         )
       } catch(err) {
@@ -194,14 +193,18 @@ function StreamingPaymentPage() {
       errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
     }
 
+    console.log(values.tokenAmount)
+    console.log(typeof values.tokenAmount)
+    console.log(!_.isFinite(values.tokenAmount))
+
     // TOKEN AMOUNT
     if (!values.tokenAmount) {
       errors.tokenAmount = 'Required'
-    } else if (values.tokenAmount <= 0 || !_.isNumber(values.tokenAmount)) {
+    } else if (values.tokenAmount <= 0 || !_.isFinite(values.tokenAmount)) {
       errors.tokenAmount = 'Unable to parse amount. Please try again.';
     }
 
-    if (parsedData.token.contract) {
+    if (parsedData.token.contract && values.tokenAmount) {
       // VALIDATE TOKEN BALANCE
       let tokenBalanceBN = await parsedData.token.contract["balanceOf"](...[web3Context.address]);
       if (tokenBalanceBN.lt(
@@ -226,7 +229,7 @@ function StreamingPaymentPage() {
     if (!values.endDate) {
       errors.endDate = 'Required'
     } else if (values.endDate <= parsedData.currentDate) {
-      errors.cliffDate = 'End date must be after today.'
+      errors.endDate = 'End date must be after today.'
     } 
 
     return errors;
@@ -345,6 +348,8 @@ function StreamingPaymentPage() {
 
                     useEffect(() => {
                       async function run() {
+                        console.log(props)
+                        console.log(props.errors)
                         await parseFormData(props.values, props.errors)
                       }
                       run()
@@ -390,7 +395,7 @@ function StreamingPaymentPage() {
                               onChange={props.handleChange}
                             />
                           </Form.SelectGroup>
-                          {props.errors.customTokenAddress && <span>{props.errors.customTokenAddress}</span>}
+                          {props.errors.customTokenAddress && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.customTokenAddress}</span>}
                         </Form.Group>
                         { false &&
                           <Form.Group className='m-3'>
@@ -415,9 +420,9 @@ function StreamingPaymentPage() {
                             value={props.values.tokenAmount}
                             disabled={status >= 4}
                             className={"form-control"}
-                            onValueChange={val => props.setFieldValue('tokenAmount',val.value)}
+                            onValueChange={val => props.setFieldValue('tokenAmount',val.floatValue)}
                           />
-                          {props.errors.tokenAmount && <span className="invalid-feedback">{props.errors.tokenAmount}</span>}
+                          {props.errors.tokenAmount && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.tokenAmount}</span>}
                         </Form.Group>
                         <Form.Group className='m-3'>
                           <Form.Input
@@ -442,11 +447,11 @@ function StreamingPaymentPage() {
                           />
                           {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
                         </Form.Group>
-                        <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
+                        {false && <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
                           <Form.StaticText className="whitespace-preline">
                             { parsedData.confirmationDetails }
                           </Form.StaticText>
-                        </Form.Group>
+                        </Form.Group>}
                         <Form.Group className='m-3'>
                           { 
                             (status <= 4) ? (

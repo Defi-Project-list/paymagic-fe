@@ -2,16 +2,20 @@
 
 import * as React from "react";
 import { NavLink, withRouter } from "react-router-dom";
+import _ from 'lodash';
 
 import {
   Nav,
   Grid,
   List,
   RouterContextProvider,
+  Text
 } from "tabler-react";
+import Select from 'react-select'
 
 import Site from "./components/tablerReactAlt/src/components/Site";
 import Account from "./components/Account";
+import { env } from "./config";
 
 import type { NotificationProps } from "tabler-react";
 
@@ -87,57 +91,75 @@ const navBarItems: Array<navItem> = [
   }
 ];
 
-class SiteWrapper extends React.Component<Props, State> {
-  state = {};
+const networkOptions = [
+  { value: 'https://mainnet.paymagic.xyz', label: 'Mainnet' },
+  { value: 'https://polygon.paymagic.xyz', label: 'Polygon' },
+  { value: 'https://kovan.paymagic.xyz', label: 'Kovan' }
+]
 
-  render(): React.Node {
-    return (
-      <Site.Wrapper
-        headerProps={{
-          href: "/",
-          alt: "Paymagic",
-          imageURL: `${process.env.PUBLIC_URL}/static/logo_512x512.png`,
-          navItems: [
-            (
-              <Nav.Item type="div" className="d-flex" key={2}>
-                <Account />
-              </Nav.Item>
-            )
-          ]
-        }}
-        navProps={{ itemsObjects: navBarItems }}
-        routerContextComponentType={withRouter(RouterContextProvider)}
-        footerProps={{
-          copyright: (
-            <React.Fragment>
+function SiteWrapper(props: Props): React.Component {
+
+  return (
+    <Site.Wrapper
+      headerProps={{
+        href: "/",
+        alt: "Paymagic",
+        imageURL: `${process.env.PUBLIC_URL}/static/logo_512x512.png`,
+        navItems:
+          (
+            <>
+            <Nav.Item type="div" className="d-flex" key={2}>
+              <Account />
+            </Nav.Item>
+            <Nav.Item hasSubNav value={_.capitalize(env)} icon="globe" type = "div" position="bottom-start">
+              <Nav.SubItem value="Polygon" to="https://polygon.paymagic.xyz"/>
+              <Nav.SubItem value="Kovan" to="https://kovan.paymagic.xyz"/>
+            </Nav.Item>
+            </>
+          )
+        
+      }}
+      navProps={{ itemsObjects: navBarItems }}
+      routerContextComponentType={withRouter(RouterContextProvider)}
+      footerProps={{
+        copyright: (
+          <React.Fragment>
+            {false && <Text>
               Copyright © 2021
-              <a href="https://twitter.com/corbpage" target="_blank" rel="noopener noreferrer"> Paymagic</a>. All rights reserved.
-            </React.Fragment>
-          ),
-          nav: (
-            <React.Fragment>
-              <Grid.Col auto={true} className="d-flex">
-                <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
-                  <List.Item className="list-inline-item">
-                    <a href="https://twitter.com/0xViabull" target="_blank" rel="noopener noreferrer">Twitter</a>
-                  </List.Item>
-                </List>
-              </Grid.Col>
-              <Grid.Col auto={true} className="d-flex">
-                <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
-                  <List.Item className="list-inline-item">
-                    <a href="https://github.com/corbinpage/paymagic-fe" target="_blank" rel="noopener noreferrer">Github</a>
-                  </List.Item>
-                </List>
-              </Grid.Col>
-            </React.Fragment>
-          ),
-        }}
-      >
-        {this.props.children}
-      </Site.Wrapper>
-    );
-  }
+              <a href="https://twitter.com/0xViabull" target="_blank" rel="noopener noreferrer"> Paymagic</a>. All rights reserved.
+            </Text>}
+          </React.Fragment>
+        ),
+        nav: (
+          <React.Fragment>
+            <Grid.Col auto={true} className="d-flex">
+              <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
+                <List.Item className="list-inline-item">
+                  <a href="https://twitter.com/0xViabull" target="_blank" rel="noopener noreferrer">Telegram</a>
+                </List.Item>
+              </List>
+            </Grid.Col>
+            <Grid.Col auto={true} className="d-flex">
+              <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
+                <List.Item className="list-inline-item">
+                  <a href="https://twitter.com/0xViabull" target="_blank" rel="noopener noreferrer">Twitter</a>
+                </List.Item>
+              </List>
+            </Grid.Col>
+            <Grid.Col auto={true} className="d-flex">
+              <List className="list-inline list-inline-dots mb-0 d-none d-md-flex">
+                <List.Item className="list-inline-item">
+                  <a href="https://github.com/corbinpage/paymagic-fe" target="_blank" rel="noopener noreferrer">Github</a>
+                </List.Item>
+              </List>
+            </Grid.Col>
+          </React.Fragment>
+        ),
+      }}
+    >
+      {props.children}
+    </Site.Wrapper>
+  )
 }
 
 export default SiteWrapper;

@@ -92,6 +92,26 @@ export function getAddress(value: any): string | false {
   }
 }
 
+export async function isToken(value: any, web3Context: any, data: any): boolean | false {
+  if(isAddress(value)){
+    try {
+      const _contract = new Contract(
+        getAddress(value),
+        data.contracts['ERC20']['abi'],
+        web3Context.provider.getSigner()
+      );
+      const _symbol = await _contract.symbol()
+      const _decimals = await _contract.decimals()
+      return true
+    }
+    catch(err) {
+      return false
+    }    
+  }
+
+  return false
+}
+
 const ETHERSCAN_PREFIXES = {
   1: '',
   3: 'ropsten.',
