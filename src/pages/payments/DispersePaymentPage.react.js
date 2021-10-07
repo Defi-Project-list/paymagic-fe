@@ -31,7 +31,8 @@ import {
   getTokenIconUriFromAddress,
   getTokenDataFromAddress,
   getAddress,
-  isAddress } from "../../utils";
+  isAddress,
+  isToken } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
 
@@ -81,68 +82,43 @@ function DispersePaymentPage() {
     }
   }, [status]);
 
-  async function parseFormData(values, errors) {
+  async function parseToken(values, errors) {
     // console.log('---Parse Form Data---')
     // console.log(values)
     // console.log(errors)
     // console.log(parsedData)
 
-    let _parsedData = parsedData
-    if(web3Context.ready) {
-      // TOKEN ADDRESS
-      let _validTokenData = false
-      if(_.isUndefined(errors.customTokenAddress) && isAddress(values.customTokenAddress)) {
-        try {
-          _parsedData.token.contract = new Contract(
-            getAddress(values.customTokenAddress),
-            paymagicData.contracts['ERC20']['abi'],
-            web3Context.provider.getSigner()
-          );
-          _parsedData.token.address = values.customTokenAddress
-          _parsedData.token.symbol = await _parsedData.token.contract.symbol()
-          _parsedData.token.decimals = await _parsedData.token.contract.decimals()
-          _validTokenData = true
-        }
-        catch(err) {
-          console.error(err)
-          _validTokenData = false
-          setStatus(2)
+    
+    let _token = parsedData.token
+    if(values.customTokenAddress && 
+      isAddress(values.customTokenAddress) && 
+        isToken(values.customTokenAddress)) {
+
+      try {
+        _token.contract = new Contract(
+          getAddress(values.customTokenAddress),
+          paymagicData.contracts['ERC20']['abi'],
+          web3Context.provider.getSigner()
+        );
+        _token.address = values.customTokenAddress
+        _token.symbol = await _token.contract.symbol()
+        _token.decimals = await _token.contract.decimals()
+      }
+      catch(err) {
+        console.error(err)
+        _token = {
+          symbol: '',
+          decimals: 0,
+          address: '',
+          contract: ''
         }
       }
 
-      // RECIPIENTS
-      // Calculate totalAmountBN
-      if(_.isEmpty(errors) && values.totalAmount) {
-        _parsedData.totalAmountBN = ethers.utils.parseUnits(
-          _.toString(values.totalAmount),
-          parsedData.token.decimals
-        )
-
-        // CONFIRMATION DETAILS
-        if(_.isEmpty(errors)) {
-          _parsedData.confirmationDetails = formatConfirmationDetails(
-            values.addressArray,
-            values.amountArray,
-            values.totalAmount,
-            _parsedData.token.symbol
-          )
-        }
-      } else {
-        _parsedData.totalAmountBN = ethers.BigNumber.from(0)
-        _parsedData.confirmationDetails = ''
-      }
-
-      setParsedData(_parsedData)
-
-      // Set validity status
-      if(_.isEmpty(errors)) {
-        setStatus(3)
-      } else {
-        setStatus(2) 
-      }
+      setParsedData({...parsedData,
+        token: _token
+      })
     }
   }
-
 
   async function parseRecipients(recipients) {
     let _addressArray = []
@@ -182,12 +158,11 @@ function DispersePaymentPage() {
     }
   }
 
-  function formatConfirmationDetails(_addressArray, _amountArray, _totalAmount, symbol) {
+  function getConfirmationDetails(_addressArray, _amountArray, _totalAmount, symbol) {
     let tempDetails = _addressArray.map((a, i) => {
       return `${_addressArray[i]}  ${numeral(_amountArray[i]).format('0,0.0000')} ${symbol}`
     })
-
-    return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${symbol}\n`
+    return`${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${symbol}\n`
   }
 
   const validateRules = async values => {
@@ -197,25 +172,30 @@ function DispersePaymentPage() {
     if (!values.customTokenAddress) {
       errors.customTokenAddress = 'Required'
     } else if ( !isAddress(values.customTokenAddress) ){
-      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
+      errors.customTokenAddress = 'Unable to read the token address. Please try again.'
+    } else if ( !isToken(values.customTokenAddress) ){
+      errors.customTokenAddress = 'Unable to find the token. Please try again.'
     }
 
     // RECIPIENTS
-    if (!values.recipients || _.isEmpty(values.addressArray) || _.isEmpty(values.amountArray)) {
+    if (!values.recipients) {
+      errors.recipients = 'Required';
+    } else if (values.addressArray.length === 0 || values.amountArray.length === 0) {
       errors.recipients = 'Required';
     } else if (values.addressArray.length !== values.amountArray.length) {
       errors.recipients = 'Unable to parse the text. Please try again.';
+    } else {
+      for (let i = 0; i < values.addressArray.length; i++) {
+        if(!isAddress(values.addressArray[i]) || !_.isFinite(values.amountArray[i])) {
+          errors.recipients = 'Unable to parse the text. Please try again.';
+          break;
+        }
+      }      
     }
 
-    for (let i = 0; i < values.addressArray.length; i++) {
-      if(!isAddress(values.addressArray[i]) || !_.isFinite(values.amountArray[i])) {
-        errors.recipients = 'Unable to parse the text. Please try again.';
-        break;
-      }
-    }
 
     // Validate Token Balance
-    if(parsedData.token.contract) {
+    if(parsedData.token.contract && parsedData.totalAmount) {
       let tokenBalanceBN = await parsedData.token.contract["balanceOf"](...[web3Context.address]);
 
       if (values.totalAmount <= 0 || !_.isFinite(values.totalAmount)) {
@@ -223,7 +203,7 @@ function DispersePaymentPage() {
       } else if(tokenBalanceBN.lt(
           ethers.utils.parseUnits(
             _.toString(values.totalAmount),
-            parsedData.token.decimals
+            parsedData.token.decimals.toNumber()
           )
         )
       ) {
@@ -235,17 +215,17 @@ function DispersePaymentPage() {
   };
 
   async function handleApproval(cb) {
-    if(web3Context.ready) {
-      const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(parsedData.token.contract["approve"](paymagicData.contracts.disperse.address, ethers.utils.parseUnits(_.toString(parsedData.totalAmount), parsedData.token.decimals)));
-    }
+    const totalAmountBN = ethers.utils.parseUnits(
+      _.toString(parsedData.totalAmount),
+      parsedData.token.decimals
+    )
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(parsedData.token.contract["approve"](paymagicData.contracts.disperse.address, totalAmountBN));
   }
   
   async function handleSubmit(cb) {
-    if(web3Context.ready) {
-      const tx = Transactor(web3Context.provider, cb, gasPrice);
-      tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray));
-    }
+    const tx = Transactor(web3Context.provider, cb, gasPrice);
+    tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray));
   }
 
   return (
@@ -284,21 +264,24 @@ function DispersePaymentPage() {
 
                     const afterMine = async (txStatus) => {
                       if(txStatus.code && txStatus.code === 4001) {
+                        // Set Status to Error
                         setStatus(3);
                       } else if(status === 6 || status === 5) {
+                        // Set Status to Complete
                         setStatus(7);
                       } else if(status === 4 || status === 3) {
+                        // Set Status to isApproved
                         setStatus(5);
                       }
                       setLoading(false);
                     }
 
                     if(status === 3) {
-                      // ApprovalTx
+                      // Send ApprovalTx
                       setStatus(4);
                       handleApproval(afterMine)
                     } else {
-                      // SubmitTx
+                      // Send SubmitTx
                       setStatus(6);
                       handleSubmit(afterMine)
                     }
@@ -307,10 +290,31 @@ function DispersePaymentPage() {
                   { props => {
                     useEffect(() => {
                       async function run() {
-                        await parseFormData(props.values, props.errors)
+                        await parseToken(props.values, props.errors)
                       }
                       run()
-                    }, [props.values]);
+                    }, [props.values.customTokenAddress]);
+
+                    useEffect(() => {
+                      async function run() {
+                        let [_addressArray, _amountArray, _totalAmount] =
+                          await parseRecipients(props.values.recipients)
+                        let _details = getConfirmationDetails(_addressArray, _amountArray, _totalAmount, parsedData.token.symbol)
+                      
+                        setParsedData({...parsedData,
+                          addressArray: _addressArray,
+                          amountArray: _amountArray,
+                          totalAmount: _totalAmount,
+                          confirmationDetails: _details
+                        })
+                        if(props.values.recipients !== '') {
+                          props.setFieldValue('addressArray', _addressArray)
+                          props.setFieldValue('amountArray', _amountArray)
+                          props.setFieldValue('totalAmount', _totalAmount)                          
+                        }
+                      }
+                      run()
+                    }, [props.values.recipients]);
 
                     return (
                       <Form onSubmit={props.handleSubmit}>
@@ -334,33 +338,28 @@ function DispersePaymentPage() {
                             onChange={props.handleChange}
                           />
                         </Form.Group>
-                        <Form.Group className='m-3'>
+                        <Form.Group label='RECIPIENTS' className='m-3 mb-5'>
                           <Form.Textarea
-                            label='RECIPIENTS'
                             name='recipients'
                             value={props.values.recipients}
                             error={props.errors.recipients }
-                            className='mb-3 height-200'
+                            className='height-200'
                             disabled={status >= 4}
                             placeholder={`0xABCDFA1DC112917c781942Cc01c68521c415e, 1
 0x00192Fb10dF37c9FB26829eb2CC623cd1BF599E8, 2
 0x5a0b54d5dc17e0aadc383d2db43b0a0d3e029c4c, 3
 0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8, 4
 ...`}
-                            onChange={async (e) => {
-                              let val = e.currentTarget.value
-                              let [a, b, c] = await parseRecipients(val)
-                              props.setFieldValue('recipients', val)
-                              props.setFieldValue('addressArray', a)
-                              props.setFieldValue('amountArray', b)
-                              props.setFieldValue('totalAmount', c)
-                            }}
+                            onChange={props.handleChange}
                           />
-                          <Form.Group label="CONFIRMATION DETAILS">
-                            <Form.StaticText className="whitespace-preline">
-                              { parsedData.confirmationDetails }
-                            </Form.StaticText>
-                          </Form.Group>
+                          <Text.Small muted>Add one wallet address and amount per row, comma separated</Text.Small> 
+                        </Form.Group>
+                        <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
+                          <Form.StaticText className="whitespace-preline">
+                            { parsedData.confirmationDetails }
+                          </Form.StaticText>
+                        </Form.Group>
+                        <Form.Group>
                           { 
                             (status >= 5) ? (
                               <Button
@@ -380,7 +379,7 @@ function DispersePaymentPage() {
                                 value="Submit"
                                 className="color "
                                 icon={'toggle-left'}
-                                disabled={!(status === 3)}
+                                disabled={!_.isEmpty(props.errors)}
                                 loading={loading}
                               >
                                 Approve

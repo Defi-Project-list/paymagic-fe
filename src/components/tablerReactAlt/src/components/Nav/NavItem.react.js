@@ -115,7 +115,7 @@ class NavItem extends React.Component<Props, State> {
         {navLink}
         {typeof children !== "string" && !hasSubNav && children}
         {hasSubNav && (
-          <Dropdown.Menu arrow show={this.state.isOpen} position={position}>
+          <Dropdown.Menu show={this.state.isOpen} position={position}>
             {subItems ||
               (subItemsObjects &&
                 subItemsObjects.map((a, i) => (

@@ -112,6 +112,7 @@ function SiteWrapper(props: Props): React.Component {
               <Account />
             </Nav.Item>
             <Nav.Item hasSubNav value={_.capitalize(env)} icon="globe" type = "div" position="bottom-end">
+              <Nav.SubItem value="Mainnet" to="https://mainnet.paymagic.xyz"/>
               <Nav.SubItem value="Polygon" to="https://polygon.paymagic.xyz"/>
               <Nav.SubItem value="Kovan" to="https://kovan.paymagic.xyz"/>
             </Nav.Item>
