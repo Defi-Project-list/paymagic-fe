@@ -4,7 +4,7 @@ import axios from "axios";
 import { ZAPPER_ID, NETWORK } from '../config'
 
 const zapperApiKey = ZAPPER_ID;
-const network = NETWORK;
+const network = (NETWORK === 'mainnet') ? 'ethereum' : NETWORK;
 
 export async function getAssets(address) {
   try {

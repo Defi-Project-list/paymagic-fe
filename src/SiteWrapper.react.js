@@ -47,7 +47,7 @@ type navItem = {|
 
 const navBarItems: Array<navItem> = [
   {
-    value: "PayMagic",
+    value: "Paymagic",
     to: "/payments",
     icon: "credit-card",
     LinkComponent: withRouter(NavLink),
