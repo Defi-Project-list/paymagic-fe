@@ -281,16 +281,16 @@ function VestingPaymentPage() {
               title={(
                 <div>
                   <Card.Title>Create new Vesting Agreement</Card.Title>
-                  <Text className="card-subtitle">Deploy a new copy of the <a href='https://github.com/GimmerBot/zeppelin-solidity/blob/master/contracts/token/TokenVesting.sol' target='_blank'>OpenZeppelin Vesting contract</a> and send tokens to a recipient that vest linearly after the cliff date.</Text>
+                  <Text className="card-subtitle">Deploy a new vesting contract, based on the <a href='https://github.com/GimmerBot/zeppelin-solidity/blob/master/contracts/token/TokenVesting.sol' target='_blank'>OpenZeppelin Vesting contract</a>, and send tokens to a recipient that vest linearly after the cliff date.</Text>
                 </div>
               )}
             >
               <Card.Body className="p-1">
                 <Formik
                   initialValues={{
-                    customTokenAddress: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
-                    tokenAmount: 1,
-                    recipient: '0x550abC18F49CB82644dF58885A3A049A021D54e0',
+                    customTokenAddress: '',
+                    tokenAmount: 10,
+                    recipient: '',
                     startDate: parsedData.currentDate,
                     endDate: new Date(
                       parsedData.currentDate.getFullYear()+4,
@@ -309,26 +309,31 @@ function VestingPaymentPage() {
 
                     const afterMine = async (txStatus) => {
                       console.log(txStatus)
-
                       if(txStatus.code && txStatus.code === 4001) {
-                        setStatus(3);
+                        if(status >= 5) {
+                          setStatus(5);
+                        } else if(status <= 4) {
+                          setStatus(3);
+                        }
                       } else if(txStatus.code) {
                         console.error(txStatus)
                         setStatus(0);
-                      } else if(status === 6 || status === 5) {
+                      } else if(status >= 5) {
+                        // Set Status to Complete
                         setStatus(7);
-                      } else if(status === 4 || status === 3) {
+                      } else if(status <= 4) {
+                        // Set Status to isApproved
                         setStatus(5);
                       }
                       setLoading(false);
                     }
 
-                    if(status === 3) {
-                      // ApprovalTx
+                    if(status <= 3) {
+                      // Send ApprovalTx
                       setStatus(4);
                       handleApproval(afterMine)
-                    } else {
-                      // SubmitTx
+                    } else if(status === 5) {
+                      // Send SubmitTx
                       setStatus(6);
                       handleCreation(afterMine)
                     }
@@ -353,7 +358,7 @@ function VestingPaymentPage() {
                             <Text className="card-subtitle">{`Step ${_.max([status - 2, 1])} of 5`}</Text>
                           </div>
                         </div>
-                        <Form.Group className='m-3'>
+                        <Form.Group className='m-4'>
                           <Form.Input
                             label='TOKEN ADDRESS'
                             name='customTokenAddress'
@@ -365,7 +370,7 @@ function VestingPaymentPage() {
                             onChange={props.handleChange}
                           />
                         </Form.Group>
-                        <Form.Group label='AMOUNT' className='m-3'>
+                        <Form.Group label='AMOUNT' className='m-4'>
                           <NumberFormat
                             placeholder="0.00"
                             allowNegative={false}
@@ -378,7 +383,7 @@ function VestingPaymentPage() {
                           />
                           {props.errors.tokenAmount && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.tokenAmount}</span>}
                         </Form.Group>
-                        <Form.Group className='m-3'>
+                        <Form.Group className='m-4'>
                           <Form.Input
                             label='RECIPIENT'
                             name='recipient'
@@ -390,7 +395,7 @@ function VestingPaymentPage() {
                             onChange={props.handleChange}
                           />
                         </Form.Group>
-                        <Form.Group label='START DATE' className='m-3'>
+                        <Form.Group label='START DATE' className='m-4'>
                           <DatePicker 
                             selected={props.values.startDate}
                             dateFormat="MMMM d, yyyy"
@@ -401,7 +406,7 @@ function VestingPaymentPage() {
                           />
                           {props.errors.startDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.startDate}</span>}
                         </Form.Group>
-                        <Form.Group label='CLIFF DATE' className='m-3'>
+                        <Form.Group label='CLIFF DATE' className='m-4'>
                           <DatePicker 
                             selected={props.values.cliffDate}
                             dateFormat="MMMM d, yyyy"
@@ -412,7 +417,7 @@ function VestingPaymentPage() {
                           />
                           {props.errors.cliffDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.cliffDate}</span>}
                         </Form.Group>
-                        <Form.Group label='END DATE' className='m-3'>
+                        <Form.Group label='END DATE' className='m-4'>
                           <DatePicker 
                             selected={props.values.endDate}
                             dateFormat="MMMM d, yyyy"
@@ -423,12 +428,12 @@ function VestingPaymentPage() {
                           />
                           {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
                         </Form.Group>
-                        {false && <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
+                        {false && <Form.Group label="CONFIRMATION DETAILS" className='m-4'>
                           <Form.StaticText className="whitespace-preline">
                             { parsedData.confirmationDetails }
                           </Form.StaticText>
                         </Form.Group>}
-                        <Form.Group className='m-3'>
+                        <Form.Group className='m-4'>
                           { 
                             (status >= 5) ? (
                               <Button

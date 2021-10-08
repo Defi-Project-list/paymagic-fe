@@ -263,24 +263,31 @@ function DispersePaymentPage() {
                     setLoading(true);
 
                     const afterMine = async (txStatus) => {
+                      console.log(txStatus)
                       if(txStatus.code && txStatus.code === 4001) {
-                        // Set Status to Error
-                        setStatus(3);
-                      } else if(status === 6 || status === 5) {
+                        if(status >= 5) {
+                          setStatus(5);
+                        } else if(status <= 4) {
+                          setStatus(3);
+                        }
+                      } else if(txStatus.code) {
+                        console.error(txStatus)
+                        setStatus(0);
+                      } else if(status >= 5) {
                         // Set Status to Complete
                         setStatus(7);
-                      } else if(status === 4 || status === 3) {
+                      } else if(status <= 4) {
                         // Set Status to isApproved
                         setStatus(5);
                       }
                       setLoading(false);
                     }
 
-                    if(status === 3) {
+                    if(status <= 3) {
                       // Send ApprovalTx
                       setStatus(4);
                       handleApproval(afterMine)
-                    } else {
+                    } else if(status === 5) {
                       // Send SubmitTx
                       setStatus(6);
                       handleSubmit(afterMine)
@@ -326,7 +333,7 @@ function DispersePaymentPage() {
                             <Text className="card-subtitle">{`Step ${_.max([status - 2, 1])} of 5`}</Text>
                           </div>
                         </div>
-                        <Form.Group className='m-3'>
+                        <Form.Group className='m-4'>
                           <Form.Input
                             label='TOKEN ADDRESS'
                             name='customTokenAddress'
@@ -338,7 +345,7 @@ function DispersePaymentPage() {
                             onChange={props.handleChange}
                           />
                         </Form.Group>
-                        <Form.Group label='RECIPIENTS' className='m-3 mb-5'>
+                        <Form.Group label='RECIPIENTS' className='m-4 mb-5'>
                           <Form.Textarea
                             name='recipients'
                             value={props.values.recipients}
@@ -354,12 +361,12 @@ function DispersePaymentPage() {
                           />
                           <Text.Small muted>Add one wallet address and amount per row, comma separated</Text.Small> 
                         </Form.Group>
-                        <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
+                        <Form.Group label="CONFIRMATION DETAILS" className='m-4'>
                           <Form.StaticText className="whitespace-preline">
                             { parsedData.confirmationDetails }
                           </Form.StaticText>
                         </Form.Group>
-                        <Form.Group>
+                        <Form.Group className='m-4'>
                           { 
                             (status >= 5) ? (
                               <Button

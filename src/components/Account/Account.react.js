@@ -33,7 +33,10 @@ function Account() {
   const loadWeb3Modal = useCallback(async () => {
     const provider = await web3Modal.connect();
     const newProvider = new Web3Provider(provider);
-    const userNetwork = await newProvider.getNetwork();
+    let userNetwork = await newProvider.getNetwork();
+    
+    userNetwork.name = (userNetwork.name === 'homestead') ? 'mainnet' : userNetwork.name
+
     if(NETWORK !== userNetwork.name) {
       console.error(`${NETWORK} !== user's network: ${userNetwork.name}`)
       alert(`Wrong network! Please connect to ${NETWORK}`);

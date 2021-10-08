@@ -51,7 +51,7 @@ const paymentTypes = [
     examples: 'Create real-time subscriptions, salaries, or vesting',
     image: '/image/stream-payment.png',
     link: '/payments/stream',
-    disabled: false
+    disabled: (env === 'polygon' || env === 'kovan')
   },
   {
     title: 'Airdrop',

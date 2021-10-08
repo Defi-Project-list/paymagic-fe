@@ -29,7 +29,7 @@ function Transaction() {
   const web3Context = useContext(Web3Context);
   const walletContext = useContext(WalletContext)
 
-  console.log(walletContext)
+  // console.log(walletContext)
 
   const title = `📄 Transactions`
 

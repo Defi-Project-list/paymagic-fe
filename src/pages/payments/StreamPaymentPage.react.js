@@ -365,7 +365,7 @@ function StreamingPaymentPage() {
                             <Text className="card-subtitle">{`Step ${_.max([status - 2, 1])} of 7`}</Text>
                           </div>
                         </div>
-                        <Form.Group label="TOKEN" className='m-3'>
+                        <Form.Group label="TOKEN" className='m-4'>
                           <Form.SelectGroup
                             label='TOKEN ADDRESS'
                             value={props.values.customTokenAddress}
@@ -398,7 +398,7 @@ function StreamingPaymentPage() {
                           {props.errors.customTokenAddress && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.customTokenAddress}</span>}
                         </Form.Group>
                         { false &&
-                          <Form.Group className='m-3'>
+                          <Form.Group className='m-4'>
                             <Form.Input
                               label='TOKEN ADDRESS'
                               name='customTokenAddress'
@@ -411,7 +411,7 @@ function StreamingPaymentPage() {
                             />
                           </Form.Group>
                         }
-                        <Form.Group label='AMOUNT' className='m-3'>
+                        <Form.Group label='AMOUNT' className='m-4'>
                           <NumberFormat
                             placeholder="0.00"
                             allowNegative={false}
@@ -424,7 +424,7 @@ function StreamingPaymentPage() {
                           />
                           {props.errors.tokenAmount && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.tokenAmount}</span>}
                         </Form.Group>
-                        <Form.Group className='m-3'>
+                        <Form.Group className='m-4'>
                           <Form.Input
                             label='RECIPIENT'
                             name='recipient'
@@ -436,7 +436,7 @@ function StreamingPaymentPage() {
                             onChange={props.handleChange}
                           />
                         </Form.Group>
-                        <Form.Group label='END DATE' className='m-3'>
+                        <Form.Group label='END DATE' className='m-4'>
                           <DatePicker 
                             selected={props.values.endDate}
                             dateFormat="MMMM d, yyyy"
@@ -447,12 +447,12 @@ function StreamingPaymentPage() {
                           />
                           {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
                         </Form.Group>
-                        {false && <Form.Group label="CONFIRMATION DETAILS" className='m-3'>
+                        {false && <Form.Group label="CONFIRMATION DETAILS" className='m-4'>
                           <Form.StaticText className="whitespace-preline">
                             { parsedData.confirmationDetails }
                           </Form.StaticText>
                         </Form.Group>}
-                        <Form.Group className='m-3'>
+                        <Form.Group className='m-4'>
                           { 
                             (status <= 4) ? (
                                 <Button
