@@ -24,10 +24,13 @@ function About() {
               statusColor="blue"
               body={(
                 <p style={{whiteSpace: "pre-line"}}>
-Paymagic allows DAOs, crypto teams, and individuals to send different payments to run their organization. Whether you're rewarding your community, paying contributors, vesting tokens to investors, or anything else, Paymagic has you covered! ✨{"\n\n"}
-The app is currently deployed to Polygon and mainnet but will launch on other networks over time. We seek to push the boundaries of what smart contract payments can do and support the further growth of DeFi, NFTs, DAOs, and crypto overall.{"\n\n"}
-Paymagic was inspired by the ideas and creations of projects like Disperse.app, SuperFluid, Sabler, MerkleDrops, and many many more. 🙏{"\n\n"}
-Feel free to contact us on Twitter if you find the service useful or have feature requests. We'll plan to ship updates, new features, and new networks in the coming months.{"\n\n"}
+Paymagic empowers DAOs and crypto teams to send specialized crypto payments, like batch transfers, vesting schedules, streaming, escrow, airdrops, etc, on any EVM compatible blockchain or Layer 2’s. 💸✨{"\n\n"}
+The app was inspired by the ideas and creations of projects like Disperse.app, SuperFluid, Sabler, MerkleDrops, and many many more. 🙏 More details about Paymagic can be found <a target="_blank" href="https://launch.mirror.xyz/tkvx9MAcsuSag0l5fa_7CmRTKyPSlyRtrMHulwknMUw">on Mirror here</a>. We'll plan to ship updates, new features, and new networks in the coming months.{"\n\n"}
+
+If you have bugs to report, feedback, or feature requests, please <a target="_blank" href="https://airtable.com/shrpR5auT6RUIOrDC">submit them here</a>.🐛{"\n\n"}
+
+If you'd like to join the DAO and contribute to the project, <a target="_blank" href="https://t.me/paymagic">join the Telegram group here</a>.💬{"\n\n"}
+
 Cheers,{"\n"}
 ✨ 💸 ✨ Paymagic Team ✨ 💸 ✨
                 </p>
