@@ -281,7 +281,7 @@ function VestingPaymentPage() {
               title={(
                 <div>
                   <Card.Title>Create new Vesting Agreement</Card.Title>
-                  <Text className="card-subtitle">Deploy a new copy of the <a href='https://github.com/GimmerBot/zeppelin-solidity/blob/master/contracts/token/TokenVesting.sol' target='_blank'>OpenZeppelin Vesting contract</a> and send tokens to a recipient that vest linearly after the cliff date.</Text>
+                  <Text className="card-subtitle">Deploy a new vesting contract, based on the <a href='https://github.com/GimmerBot/zeppelin-solidity/blob/master/contracts/token/TokenVesting.sol' target='_blank'>OpenZeppelin Vesting contract</a>, and send tokens to a recipient that vest linearly after the cliff date.</Text>
                 </div>
               )}
             >
