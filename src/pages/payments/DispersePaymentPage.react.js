@@ -82,7 +82,7 @@ function DispersePaymentPage() {
     }
   }, [status]);
 
-  async function parseToken(values, errors) {
+  async function parseToken(values, errors, setFieldError) {
     // console.log('---Parse Form Data---')
     // console.log(values)
     // console.log(errors)
@@ -112,6 +112,7 @@ function DispersePaymentPage() {
           address: '',
           contract: ''
         }
+        setFieldError('customTokenAddress', 'Unable to find the token. Please try again.')
       }
 
       setParsedData({...parsedData,
@@ -297,7 +298,7 @@ function DispersePaymentPage() {
                   { props => {
                     useEffect(() => {
                       async function run() {
-                        await parseToken(props.values, props.errors)
+                        await parseToken(props.values, props.errors, props.setFieldError)
                       }
                       run()
                     }, [props.values.customTokenAddress]);
