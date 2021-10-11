@@ -32,7 +32,8 @@ import {
   getTokenDataFromAddress,
   getAddress,
   isAddress,
-  isToken } from "../../utils";
+  isToken,
+  getBlockExplorerLink } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
 
@@ -263,8 +264,11 @@ function DispersePaymentPage() {
                   onSubmit={async (values, actions) => {
                     setLoading(true);
 
-                    const afterMine = async (txStatus) => {
+                    const afterMine = async (txStatus, txData) => {
                       console.log(txStatus)
+                      console.log(txData)
+                      console.log(getBlockExplorerLink(txData.hash,'transaction'))
+
                       if(txStatus.code && txStatus.code === 4001) {
                         if(status >= 5) {
                           setStatus(5);
