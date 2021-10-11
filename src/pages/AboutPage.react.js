@@ -24,7 +24,7 @@ function About() {
               statusColor="blue"
               body={(
                 <p style={{whiteSpace: "pre-line"}}>
-Paymagic is a payment tool for DAOs and crypto teams. Send batch token transfers, airdrops, vesting schedules, streaming payments, escrow, and more on any blockchain or Layer 2’s. 💸✨{"\n\n"}
+Paymagic is a payment tool for DAOs and crypto teams. Send batch transfers, airdrops, vesting schedules, streaming payments, and more all from one easy app. 💸✨{"\n\n"}
 The app was inspired by the ideas and creations of projects like Disperse.app, SuperFluid, Sabler, MerkleDrops, and many more. 🙏 {"\n\n"}
 
 🐛 Submit <a target="_blank" href="https://airtable.com/shrpR5auT6RUIOrDC">bugs or feature requests here</a>.{"\n"}
