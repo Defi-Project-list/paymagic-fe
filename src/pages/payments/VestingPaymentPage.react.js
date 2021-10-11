@@ -3,9 +3,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import _ from 'lodash';
-import numeral from 'numeral';
 import { ethers, Contract } from "ethers";
-import * as EthDater from 'ethereum-block-by-date'
 import { Formik } from 'formik';
 import Confetti from 'react-confetti'
 
@@ -16,12 +14,10 @@ import {
   Grid,
   Card,
   Text,
-  Dimmer,
   Button,
   Form,
   Progress
 } from "tabler-react";
-import SelectToken from "../../components/SelectToken";
 import NumberFormat from 'react-number-format';
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css";
@@ -32,8 +28,6 @@ import {
 } from "../../hooks";
 import {
   Transactor,
-  getTokenIconUriFromAddress,
-  getTokenDataFromAddress,
   getAddress,
   isAddress,
   isToken } from "../../utils";
@@ -93,7 +87,7 @@ function VestingPaymentPage() {
     }
   }, [status]);
 
-  async function parseFormData(values, errors) {
+  async function parseFormData(values, errors, setFieldError) {
     // console.log('---Parse Form Data---')
     // console.log(`values ${JSON.stringify(values)}`)
     // console.log(`errors ${JSON.stringify(errors)}`)
@@ -123,6 +117,7 @@ function VestingPaymentPage() {
           address: '',
           contract: ''
         }
+        setFieldError('customTokenAddress', 'Unable to find the token. Please try again.')
       }
     }
 
@@ -303,7 +298,7 @@ function VestingPaymentPage() {
 
                     useEffect(() => {
                       async function run() {
-                        await parseFormData(props.values, props.errors)
+                        await parseFormData(props.values, props.errors, props.setFieldError)
                       }
                       run()
                     }, [props.values]);
