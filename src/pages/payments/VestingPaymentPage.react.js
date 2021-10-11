@@ -100,79 +100,43 @@ function VestingPaymentPage() {
     // console.log(`old parsed data ${JSON.stringify(parsedData)}`)
 
     let _parsedData = parsedData
-    if(web3Context.ready) {
-      // TOKEN ADDRESS
-      let _validTokenData = false
-      let _token = parsedData.token
-      if(isAddress(values.customTokenAddress) && isToken(values.customTokenAddress)) {
-        try {
-          _token.contract = new Contract(
-            getAddress(values.customTokenAddress),
-            paymagicData.contracts['ERC20']['abi'],
-            web3Context.provider.getSigner()
-          );
-          _token.address = values.customTokenAddress
-          _token.symbol = await _token.contract.symbol()
-          _token.decimals = await _token.contract.decimals()
-          _validTokenData = true
-        }
-        catch(err) {
-          console.error(err)
-          setStatus(2)
-        }
-      }
+    if(values.customTokenAddress && 
+      isAddress(values.customTokenAddress) && 
+        isToken(values.customTokenAddress)) {
 
-
-      // TOKEN AMOUNT
       try {
-        _parsedData.tokenAmountBN = ethers.utils.parseUnits(
-          _.toString(values.tokenAmount),
-          _token.decimals.toNumber()
-        )
-      } catch(err) {
-        console.error(err)
-        _parsedData.tokenAmountBN = ethers.BigNumber.from(0)
+        _parsedData.token.contract = new Contract(
+          getAddress(values.customTokenAddress),
+          paymagicData.contracts['ERC20']['abi'],
+          web3Context.provider.getSigner()
+        );
+
+        _parsedData.token.address = getAddress(values.customTokenAddress)
+        _parsedData.token.decimals = await _parsedData.token.contract.decimals()
+        _parsedData.token.symbol = await _parsedData.token.contract.symbol()
       }
-
-      // RECIPIENT
-      _parsedData.recipient = getAddress(values.recipient)
-
-      // DATES
-      // Convert to Unix time in seconds
-      _parsedData.startDate = ethers.BigNumber.from(_.round(values.startDate.getTime() / 1000))
-      _parsedData.cliffDate = ethers.BigNumber.from(_.round((values.cliffDate.getTime() - values.startDate.getTime()) / 1000))
-      _parsedData.endDate = ethers.BigNumber.from(_.round((values.endDate.getTime() - values.startDate.getTime()) / 1000))
-
-      // CONFIRMATION DETAILS
-      // _parsedData.confirmationDetails = formatConfirmationDetails(_parsedData)
-
-      // console.log(`new parsed data ${JSON.stringify(_parsedData)}`)
-      setParsedData(_parsedData)
-
-      // Set validity status
-      if(_validTokenData) {
-        setStatus(3) 
-      } else {
-        setStatus(2) 
+      catch(err) {
+        console.error(err)
+        _parsedData.token = {
+          symbol: '',
+          decimals: 0,
+          address: '',
+          contract: ''
+        }
       }
     }
-  }
 
-  function formatConfirmationDetails(_parsedData) {
-    // XXX USDC per month
-    // XXX USDC per year
+    // RECIPIENT
+    _parsedData.recipient = values.recipient
+
+    // DATES
+    // Convert to Unix time in seconds
+    _parsedData.startDate = ethers.BigNumber.from(_.round(values.startDate.getTime() / 1000))
+    _parsedData.cliffDate = ethers.BigNumber.from(_.round((values.cliffDate.getTime() - values.startDate.getTime()) / 1000))
+    _parsedData.endDate = ethers.BigNumber.from(_.round((values.endDate.getTime() - values.startDate.getTime()) / 1000))
 
 
-
-    // let tempDetails = _addressArray.map((a, i) => {
-    //   let tempBN = _amountArray[i] ? _amountArray[i] : ethers.BigNumber.from(0)
-    //   let tempNumber = ethers.utils.formatUnits(
-    //     tempBN, parsedData.token.decimals
-    //   )
-    //   return `${_addressArray[i]}  ${numeral(tempNumber).format('0,0.0000')} ${_tokenSymbol}`
-    // })
-
-    // return `${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${_tokenSymbol}\n`
+    setParsedData(_parsedData)
   }
 
   const validateRules = async values => {
@@ -182,37 +146,33 @@ function VestingPaymentPage() {
     if (!values.customTokenAddress) {
       errors.customTokenAddress = 'Required'
     } else if ( !isAddress(values.customTokenAddress) ){
-      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
+      errors.customTokenAddress = 'Unable to read the token address. Please try again.'
     } else if ( !isToken(values.customTokenAddress) ){
-      errors.customTokenAddress = 'Unable to parse the token address. Please try again.'
+      errors.customTokenAddress = 'Unable to find the token. Please try again.'
     }
 
-    // TOKEN AMOUNT
-    if (!values.tokenAmount) {
-      errors.tokenAmount = 'Required'
-    } else if (values.tokenAmount <= 0 || !_.isNumber(values.tokenAmount)) {
-      errors.tokenAmount = 'Unable to parse amount. Please try again.';
-    }
-
-    if (parsedData.token.contract) {
-      // VALIDATE TOKEN BALANCE
+    // Validate Token Balance
+    if(parsedData.token.contract && parsedData.totalAmount) {
       let tokenBalanceBN = await parsedData.token.contract["balanceOf"](...[web3Context.address]);
-      if (tokenBalanceBN.lt(
+
+      if (values.totalAmount <= 0 || !_.isFinite(values.totalAmount)) {
+        errors.totalAmount = 'Unable to parse the text. Please try again.';
+      } else if(tokenBalanceBN.lt(
           ethers.utils.parseUnits(
-            _.toString(values.tokenAmount),
+            _.toString(values.totalAmount),
             parsedData.token.decimals.toNumber()
           )
         )
       ) {
-        errors.tokenAmount = 'Your token balance is too low';
-      }  
+        errors.totalAmount = 'Your token balance is too low';
+      }      
     }
 
     // RECIPIENT
     if (!values.recipient) {
       errors.recipient = 'Required'
     } else if ( !isAddress(values.recipient) ){
-      errors.recipient = 'Unable to parse the address. Please try again.'
+      errors.recipient = 'Unable to read the address. Please try again.'
     }
 
     // DATES
@@ -453,7 +413,7 @@ function VestingPaymentPage() {
                                 value="Submit"
                                 className="color "
                                 icon={'toggle-left'}
-                                disabled={status < 3 || !_.isEmpty(props.errors)}
+                                disabled={!_.isEmpty(props.errors)}
                                 loading={loading}
                               >
                                 Approve
