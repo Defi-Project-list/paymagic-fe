@@ -58,9 +58,9 @@ class SiteWrapper extends React.PureComponent<Props, State> {
     return (
       <Page>
         <Page.Main>
-          { false &&
+          { true &&
             <Alert type="info" className="d-flex justify-content-center">
-              <strong>This is an early project. The contracts have NOT been audited. Be careful friend! 🙏</strong>
+              <strong>This is an early, unaudited project. Use at your own risk. Be careful friend! 🙏</strong>
             </Alert>
           }
           {header}
