@@ -111,18 +111,11 @@ function VestingPaymentPage() {
           web3Context.provider.getSigner()
         );
 
-        console.log(_parsedData)
-        console.log(_parsedData.token)
-
-
         _parsedData.token.address = getAddress(values.customTokenAddress)
         _parsedData.token.decimals = await _parsedData.token.contract.decimals()
         _parsedData.token.symbol = await _parsedData.token.contract.symbol()
-
-        console.log(_parsedData)
       }
       catch(err) {
-        console.log(_parsedData)
         console.error(err)
         _parsedData.token = {
           symbol: '',
