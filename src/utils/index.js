@@ -11,7 +11,7 @@ import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers'
 // import { ChainId, JSBI, Percent, Token, CurrencyAmount, Currency, ETHER } from '@uniswap/sdk'
 // import { TokenAddressMap } from '../state/lists/hooks'
 // import { INFURA_ID } from "./constants";
-import { S3_ASSETS } from "../config";
+import { S3_ASSETS, BLOCK_EXPLORER_LINK } from "../config";
 
 export { default as GetBalanceOfERC20ForAddress } from "./GetBalanceOfERC20ForAddress";
 export { default as getPricePerFullShare } from "./GetPricePerFullShare";
@@ -118,6 +118,29 @@ const ETHERSCAN_PREFIXES = {
   4: 'rinkeby.',
   5: 'goerli.',
   42: 'kovan.'
+}
+
+export function getBlockExplorerLink(
+  data: string,
+  type: 'transaction' | 'token' | 'address' | 'block'
+): string {
+  const prefix = BLOCK_EXPLORER_LINK
+
+  switch (type) {
+    case 'transaction': {
+      return `${prefix}/tx/${data}`
+    }
+    case 'token': {
+      return `${prefix}/token/${data}`
+    }
+    case 'block': {
+      return `${prefix}/block/${data}`
+    }
+    case 'address':
+    default: {
+      return `${prefix}/address/${data}`
+    }
+  }
 }
 
 export function getEtherscanLink(

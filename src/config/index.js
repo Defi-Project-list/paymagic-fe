@@ -16,6 +16,13 @@ export const INFURA_LINK = env === "production" ? `https://mainnet.infura.io/v3/
   `kovan`;
 export const infuraProvider = new JsonRpcProvider(INFURA_LINK);
 
+export const BLOCK_EXPLORER_LINK = env === "production" ? `https://etherscan.io` : 
+  env === `mainnet` ? `https://etherscan.io` :
+  env === `kovan` ? `https://kovan.etherscan.io` :
+  env === `polygon` ? `https://polygonscan.com` :
+  `https://kovan.etherscan.io`;
+
+
 export const BLOCKNATIVE_ID = process.env.REACT_APP_BLOCKNATIVE_ID || 'e6afe269-3ff9-4c3f-897e-6350774f7355';
 export const ZAPPER_ID = process.env.REACT_APP_ZAPPER_ID || `96e0cc51-a62e-42ca-acee-910ea7d2a241`
 

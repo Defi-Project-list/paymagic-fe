@@ -32,7 +32,8 @@ import {
   getTokenDataFromAddress,
   getAddress,
   isAddress,
-  isToken } from "../../utils";
+  isToken,
+  getBlockExplorerLink } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
 
@@ -45,6 +46,7 @@ function DispersePaymentPage() {
 
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState({title: '', color: 'primary'})
+  const [txData, setTxData] = useState({})
   const [status, setStatus] = useState(1);
     // 1 - start | 2 - notValid |  3 - isValid
     // 4 - approveTx | 5 - isApproved | 6 - submitTx
@@ -68,13 +70,13 @@ function DispersePaymentPage() {
     switch(status) {
       case 0:
         setAlert({
-          title: 'An error has occurred. Please refresh the page and try again.',
+          info: (<p>An error has occurred. Please refresh the page and try again.</p>),
           color: 'danger'
         })
         break;
       case 7:
         setAlert({
-          title: 'Your transaction is complete! Thanks for using Paymagic!',
+          info: (<p>Your transaction is complete! {"\n"}<a href={getBlockExplorerLink(txData.hash,'transaction')} target="_blank">View on Etherscan</a>.</p>),
           color: 'success'
         })
         break;
@@ -246,7 +248,7 @@ function DispersePaymentPage() {
                   <Text className="card-subtitle">Input any token address and then batch transfer tokens to many different recipients in a single tx.</Text>
                 </div>
               )}
-              alert={alert.title}
+              alert={alert.info}
               alertColor={alert.color}
             >
               <Card.Body className="p-1">
@@ -263,8 +265,11 @@ function DispersePaymentPage() {
                   onSubmit={async (values, actions) => {
                     setLoading(true);
 
-                    const afterMine = async (txStatus) => {
+                    const afterMine = async (txStatus, txData) => {
                       console.log(txStatus)
+                      console.log(txData)
+                      setTxData(txData)
+
                       if(txStatus.code && txStatus.code === 4001) {
                         if(status >= 5) {
                           setStatus(5);
