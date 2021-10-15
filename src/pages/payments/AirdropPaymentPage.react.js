@@ -4,7 +4,7 @@ import React, { useState, useContext, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import _ from 'lodash';
 import numeral from 'numeral';
-import { ethers, Contract } from "ethers";
+import { ethers, Contract, BigNumber } from "ethers";
 import { Formik } from 'formik';
 import * as csv from 'csvtojson'
 import Confetti from 'react-confetti'
@@ -36,10 +36,19 @@ import {
   getBlockExplorerLink } from "../../utils";
 import { Web3Context, WalletContext } from '../../App.react';
 import { default as paymagicData } from "../../data";
+import { useAirdropFactory } from '../../hooks/useAirdropFactory';
+import BalanceTree from '../../utils/balance-tree';
+import { parseBalanceMap } from '../../utils/parse-balance-map';
+import { addTreeToIPFS, getMerkleData } from '../../utils/getMerkleData';
+import { useMerkleDistributor } from '../../hooks/useMerkleDistributor';
+import { parseEther } from '@ethersproject/units';
 
 
 function AirdropPaymentPage() {
   const web3Context = useContext(Web3Context)
+  const airdropFactory = useAirdropFactory(web3Context.provider)
+  const [airdropIndex, setAirdropIndex] = useState(1)
+  // const merkleDistributor = useMerkleDistributor(web3Context.provider, airdropFactory, airdropIndex)
   const walletContext = useContext(WalletContext)
   const gasPrice = useGasPrice("fast")
   const contracts = useContractLoader(web3Context.provider);
@@ -51,6 +60,8 @@ function AirdropPaymentPage() {
     // 4 - approveTx | 5 - isApproved | 6 - submitTx
     // 7 - complete
 
+  const [merkleTree, setMerkleTree] = useState(null)
+  const [_parsedRecipients, setParsedRecipients] = useState()
   const [parsedData, setParsedData] = useState({
     token: {
       symbol: '',
@@ -130,34 +141,15 @@ function AirdropPaymentPage() {
     const converter = csv({
       delimiter: [",","|"],
       noheader: true,
+      headers: ['account', 'amount'],
       trim: true
     })
-    let parsed = await converter.fromString(recipients)
-
-    try {
-      parsed.forEach( (a,i) =>{
-        _addressArray[i] = _.get(a, 'field1', null)
-        let temp = _.toNumber(
-          _.get(a, 'field2', 0)
-        )
-        _amountArray[i] = _.isFinite(temp) ? temp : 0 // isFinite excludes NaN
-        _totalAmount += _amountArray[i]
-      })
-
-      return [
-        _addressArray,
-        _amountArray,
-        _totalAmount
-      ]
-    }
-    catch(err) {
-      console.error(err)
-      return [
-        [],
-        [],
-        0
-      ]
-    }
+    const parsedRecipients = await converter.fromString(recipients)
+    setParsedRecipients(parsedRecipients)
+      return parsedRecipients.map(recipient => ({
+        ...recipient,
+        amount: recipient.amount,
+      }));
   }
 
   function getConfirmationDetails(_addressArray, _amountArray, _totalAmount, symbol) {
@@ -167,7 +159,7 @@ function AirdropPaymentPage() {
     return`${_.join(tempDetails,`\n`)}\n-----\nTOTAL ${numeral(_totalAmount).format('0,0.0000')} ${symbol}\n`
   }
 
-  const validateRules = async values => {
+  const validateRules = async (values, skipRecipientValidation = false) => {
     const errors = {};
 
     // CUSTOM TOKEN ADDRESS
@@ -180,7 +172,7 @@ function AirdropPaymentPage() {
     }
 
     // RECIPIENTS
-    if (!values.recipients) {
+    if (!skipRecipientValidation && !values.recipients) {
       errors.recipients = 'Required';
     } else if (values.addressArray.length === 0 || values.amountArray.length === 0) {
       errors.recipients = 'Required';
@@ -216,6 +208,80 @@ function AirdropPaymentPage() {
     return errors;
   };
 
+  const getMerkleDistributor = async () => {
+    const distributorAddress = await airdropFactory.getAirdropAddress(
+      airdropIndex.toString()
+    );
+    console.log(distributorAddress);
+    return new Contract(
+      distributorAddress,
+      paymagicData.contracts.MerkleDistributor.abi,
+      web3Context.provider.getSigner()
+    );
+  };
+
+  const createAirdrop = async (tokenAddress, merkleRoot, cid) => {
+    const tx = await airdropFactory.createAirdrop(tokenAddress, merkleRoot, cid);
+    console.log(tx)
+    debugger
+    return tx
+  }
+
+  const getAddressOfDrop = async () => {
+     const address = await airdropFactory.getAirdropAddress(BigNumber.from(0));
+     console.log(address)
+     return address
+  }
+  
+  const getAirdropCID = async (airdropNum = 0) => {
+    const tx = await airdropFactory.getAirdropCID(BigNumber.from(airdropNum));
+    console.log(tx)
+    return tx
+  }
+
+  const checkIsClaimed = async () => {
+     const merkleDistributor = await getMerkleDistributor();
+     const tx = await merkleDistributor.isClaimed(BigNumber.from(0));
+     console.log(tx)
+     return tx
+  }
+
+  const createMerkleTree = recipients => {
+    const tree = new BalanceTree(recipients)
+    setMerkleTree(tree)
+    return tree
+  }
+
+  const claimAirdropForAddresss = async () => {
+    const merkleDistributor = await getMerkleDistributor();
+    const cid = await getAirdropCID(airdropIndex)
+    const data = await getMerkleData(cid)
+    const tree = createMerkleTree(data.recipients)
+    const index = data.recipients.findIndex(({ account }) => account === web3Context.address )
+    const leaf = data.recipients[index]
+    const proof = tree.getProof(index, web3Context.address, leaf.amount)
+
+    const tx = Transactor(web3Context.provider, logTransaction, gasPrice);
+    const args = [index, web3Context.address, parseEther(`${leaf.amount}`), proof]
+    // const args = [index, web3Context.address, parseEther(`${leaf.amount}`), proof]
+    console.log(args)
+    debugger
+    tx(merkleDistributor.claim(index, web3Context.address, parseEther(`${leaf.amount}`), proof))
+    // tx(merkleDistributor.claim(index, web3Context.address, parseEther(`${leaf.amount}`), proof))
+  }
+
+  const logTransaction = async (txStatus, txData) => {
+    console.log(txStatus)
+    console.log(txData)
+    // console.log(getBlockExplorerLink(txData.hash,'transaction'))
+    setLoading(false);
+  }
+
+  const handleAirdropIndexChange = newIndex => {
+    setAirdropIndex(newIndex)
+    console.log(newIndex)
+  }
+
   async function handleApproval(cb) {
     const totalAmountBN = ethers.utils.parseUnits(
       _.toString(parsedData.totalAmount),
@@ -224,10 +290,22 @@ function AirdropPaymentPage() {
     const tx = Transactor(web3Context.provider, cb, gasPrice);
     tx(parsedData.token.contract["approve"](paymagicData.contracts.disperse.address, totalAmountBN));
   }
-  
+
   async function handleSubmit(cb) {
+    const result = await addTreeToIPFS(
+      JSON.stringify(
+        { recipients: [..._parsedRecipients], merkleRoot: merkleTree.getHexRoot() },
+      )
+    );
+    console.log(result);
     const tx = Transactor(web3Context.provider, cb, gasPrice);
-    tx(contracts['disperse']["disperseTokenSimple"](parsedData.token.address, parsedData.addressArray, parsedData.amountArray));
+    tx(
+      createAirdrop(
+        parsedData.token.address,
+        merkleTree.getHexRoot(),
+        result.path
+      )
+    );
   }
 
   return (
@@ -239,6 +317,11 @@ function AirdropPaymentPage() {
             <Link to="/payments">
               <span>{`<< Back`}</span>
             </Link>
+            <button onClick={evt => {
+                evt.preventDefault()
+                claimAirdropForAddresss()
+            }}>Claim tokens</button>
+            <input value={airdropIndex} onChange={evt => handleAirdropIndexChange(evt.target.value)}></input>
             <Card
               className="mb-1 mt-1"
               title={(
@@ -260,7 +343,7 @@ function AirdropPaymentPage() {
                     amountArray: [],
                     totalAmount: 0
                   }}
-                  validate={ validateRules }
+                  // validate={ values => validateRules(values, true) }
                   onSubmit={async (values, actions) => {
                     setLoading(true);
 
@@ -268,35 +351,11 @@ function AirdropPaymentPage() {
                       console.log(txStatus)
                       console.log(txData)
                       console.log(getBlockExplorerLink(txData.hash,'transaction'))
-
-                      if(txStatus.code && txStatus.code === 4001) {
-                        if(status >= 5) {
-                          setStatus(5);
-                        } else if(status <= 4) {
-                          setStatus(3);
-                        }
-                      } else if(txStatus.code) {
-                        console.error(txStatus)
-                        setStatus(0);
-                      } else if(status >= 5) {
-                        // Set Status to Complete
-                        setStatus(7);
-                      } else if(status <= 4) {
-                        // Set Status to isApproved
-                        setStatus(5);
-                      }
                       setLoading(false);
                     }
-
-                    if(status <= 3) {
-                      // Send ApprovalTx
-                      setStatus(4);
-                      handleApproval(afterMine)
-                    } else if(status === 5) {
                       // Send SubmitTx
                       setStatus(6);
                       handleSubmit(afterMine)
-                    }
                   }}
                 >
                   { props => {
@@ -309,21 +368,11 @@ function AirdropPaymentPage() {
 
                     useEffect(() => {
                       async function run() {
-                        let [_addressArray, _amountArray, _totalAmount] =
-                          await parseRecipients(props.values.recipients)
-                        let _details = getConfirmationDetails(_addressArray, _amountArray, _totalAmount, parsedData.token.symbol)
-                      
-                        setParsedData({...parsedData,
-                          addressArray: _addressArray,
-                          amountArray: _amountArray,
-                          totalAmount: _totalAmount,
-                          confirmationDetails: _details
-                        })
-                        if(props.values.recipients !== '') {
-                          props.setFieldValue('addressArray', _addressArray)
-                          props.setFieldValue('amountArray', _amountArray)
-                          props.setFieldValue('totalAmount', _totalAmount)                          
-                        }
+                        const parsedRecipients = await parseRecipients(
+                          props.values.recipients
+                        );
+                        if (parsedRecipients.length)
+                          createMerkleTree(parsedRecipients);
                       }
                       run()
                     }, [props.values.recipients]);
@@ -391,7 +440,7 @@ function AirdropPaymentPage() {
                                 value="Submit"
                                 className="color "
                                 icon={'toggle-left'}
-                                disabled={!_.isEmpty(props.errors)}
+                                disabled={false}
                                 loading={loading}
                               >
                                 Approve

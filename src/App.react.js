@@ -18,6 +18,7 @@ import DispersePaymentPage from "./pages/payments/DispersePaymentPage.react";
 import VestingPaymentPage from "./pages/payments/VestingPaymentPage.react";
 import AirdropPaymentPage from "./pages/payments/AirdropPaymentPage.react";
 import StreamPaymentPage from "./pages/payments/StreamPaymentPage.react";
+import ClaimTokenPage from "./pages/ClaimTokenPage.react";
 
 import { useWalletContext } from "./hooks";
 
@@ -85,6 +86,7 @@ function App(props: Props): React.Node {
               <Route exact path="/payments/disperse" component={DispersePaymentPage} />
               <Route exact path="/payments/vesting" component={VestingPaymentPage} />
               <Route exact path="/payments/airdrop" component={AirdropPaymentPage} />
+              <Route exact path="/payments/claim" component={ClaimTokenPage} />
               <Route exact path="/payments/stream" component={StreamPaymentPage} />
               <Redirect to='/payments' />
               <Route component={Error404} />

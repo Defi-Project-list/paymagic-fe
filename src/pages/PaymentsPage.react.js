@@ -59,7 +59,7 @@ const paymentTypes = [
     examples: 'Reward liquidity providers, users, or communities',
     image: '/image/airdrop-payment.png',
     link: '/payments/airdrop',
-    disabled: true
+    disabled: false
   },
   {
     title: 'Escrow',
