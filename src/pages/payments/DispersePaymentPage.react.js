@@ -105,6 +105,7 @@ function DispersePaymentPage() {
         _token.address = values.customTokenAddress
         _token.symbol = await _token.contract.symbol()
         _token.decimals = await _token.contract.decimals()
+
       }
       catch(err) {
         console.error(err)

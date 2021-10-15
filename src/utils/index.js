@@ -235,6 +235,11 @@ export function shortenTx(tx: string, chars = 4): string {
 //   return Boolean(currency instanceof Token && defaultTokens[currency.chainId]?.[currency.address])
 // }
 
+export function displayAmount(amount, decimals) {
+  amount = amount / (10 ** decimals)
+  return Math.round(amount * 10000) / 10000
+}
+
 export function displayTxDatetime(unixTime) {
   return moment.unix(unixTime).fromNow();
 }

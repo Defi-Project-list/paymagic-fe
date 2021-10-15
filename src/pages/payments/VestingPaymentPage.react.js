@@ -10,6 +10,7 @@ import Confetti from 'react-confetti'
 
 import SiteWrapper from "../../SiteWrapper.react";
 import Page from '../../components/tablerReactAlt/src/components/Page'
+import VestingChart from '../../components/VestingChart'
 import {
   Grid,
   Card,
@@ -387,6 +388,17 @@ function VestingPaymentPage() {
                           />
                           {props.errors.endDate && <span className="invalid-feedback" style={{"display":"block"}}>{props.errors.endDate}</span>}
                         </Form.Group>
+                        {false && <Form.Group label="VESTING SCHEDULE" className='m-4'>
+                          <VestingChart
+                            details={{
+                              start: props.values.startDate / 1000,
+                              cliff: props.values.cliffDate / 1000,
+                              end: props.values.endDate / 1000,
+                              total: props.values.tokenAmount,
+                              decimals: parsedData.token.decimals
+                            }}
+                          />
+                        </Form.Group>}
                         {false && <Form.Group label="CONFIRMATION DETAILS" className='m-4'>
                           <Form.StaticText className="whitespace-preline">
                             { parsedData.confirmationDetails }
